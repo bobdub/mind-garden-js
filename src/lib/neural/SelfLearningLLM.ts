@@ -2,6 +2,7 @@ import { Layer } from './Layer';
 import { LocalMemory } from './LocalMemory';
 import { Tagger } from './Tagger';
 import type { ChatMessage } from '@/types/chat';
+import { assemblePrompt, CORE_SYSTEM_PROMPT } from './promptTemplates';
 
 export interface TrainingEntry {
   prompt: string;
@@ -110,6 +111,7 @@ export class SelfLearningLLM {
 
   respond(prompt: string, history: ChatMessage[] = [], windowSize: number = 6): string {
     const contextWindow = windowSize > 0 ? history.slice(-windowSize) : [];
+    const assembledPrompt = assemblePrompt({ prompt, history: contextWindow });
     const contextText = contextWindow
       .map((entry) => `${entry.role === 'user' ? 'User' : 'Assistant'}: ${entry.content}`)
       .join(' ')
@@ -118,7 +120,14 @@ export class SelfLearningLLM {
       ? `${contextText} User: ${prompt}`
       : prompt;
 
-    const inputVector = this.vectorize(contextualPrompt);
+    if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+      console.debug('[SelfLearningLLM] Using system prompt', {
+        systemPromptPreview: CORE_SYSTEM_PROMPT.slice(0, 120),
+        assembledPrompt
+      });
+    }
+
+    const inputVector = this.vectorize(assembledPrompt);
     const tags = this.tag(contextualPrompt);
 
     // Check memory for similar prompts
