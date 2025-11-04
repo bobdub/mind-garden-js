@@ -46,6 +46,11 @@ class FeedbackStore {
 
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+      window.dispatchEvent(
+        new CustomEvent('feedback:log-updated', {
+          detail: { events }
+        })
+      );
     } catch (error) {
       console.warn('[feedback] failed to persist feedback locally', error);
     }

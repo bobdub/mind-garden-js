@@ -5,6 +5,7 @@ import { ChatInterface } from '@/components/ChatInterface';
 import { TrainingPanel } from '@/components/TrainingPanel';
 import { MemoryViewer } from '@/components/MemoryViewer';
 import { NeuralVisualizer } from '@/components/NeuralVisualizer';
+import { LearningGoalsPanel } from '@/components/LearningGoalsPanel';
 
 const Index = () => {
   const [llm] = useState(() => new SelfLearningLLM());
@@ -44,6 +45,7 @@ const Index = () => {
           {/* Right Column - Controls & Stats */}
           <div className="space-y-6">
             <TrainingPanel llm={llm} onTrained={handleTrained} />
+            <LearningGoalsPanel />
             <MemoryViewer llm={llm} refreshTrigger={refreshTrigger} />
             <NeuralVisualizer />
           </div>
