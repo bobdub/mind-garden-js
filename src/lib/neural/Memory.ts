@@ -1,15 +1,15 @@
-export class Memory {
-  private store: Map<string, any>;
+export class Memory<TValue = unknown> {
+  private readonly store: Map<string, TValue>;
 
   constructor() {
     this.store = new Map();
   }
 
-  remember(key: string, value: any): void {
+  remember(key: string, value: TValue): void {
     this.store.set(key, value);
   }
 
-  recall(key: string): any {
+  recall(key: string): TValue | undefined {
     return this.store.get(key);
   }
 
