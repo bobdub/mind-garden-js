@@ -10,7 +10,8 @@ import { ChatProvider } from "@/context/ChatContext";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const basename = import.meta.env.BASE_URL;
+  const rawBase = import.meta.env.BASE_URL ?? "/";
+  const basename = rawBase === "/" ? "/" : rawBase.replace(/\/+$/, "");
 
   return (
     <QueryClientProvider client={queryClient}>
