@@ -19,11 +19,19 @@ interface ChatContextValue {
   trimMessages: (limit?: number) => void;
 }
 
-const INITIAL_ASSISTANT_MESSAGE: ChatMessage = {
+const createAssistantMessage = (content: string): ChatMessage => ({
+  id:
+    typeof globalThis !== 'undefined' && globalThis.crypto && 'randomUUID' in globalThis.crypto
+      ? globalThis.crypto.randomUUID()
+      : `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   role: 'assistant',
-  content: "Hello! I'm a self-learning LLM. I'll learn from our conversations. Try teaching me something!",
+  content,
   timestamp: Date.now()
-};
+});
+
+const INITIAL_ASSISTANT_MESSAGE: ChatMessage = createAssistantMessage(
+  "Hello! I'm a self-learning LLM. I'll learn from our conversations. Try teaching me something!"
+);
 
 const INITIAL_STATE: ChatState = {
   messages: [INITIAL_ASSISTANT_MESSAGE],
@@ -42,12 +50,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'CLEAR':
       return {
         ...state,
-        messages: [
-          {
-            ...INITIAL_ASSISTANT_MESSAGE,
-            timestamp: Date.now()
-          }
-        ]
+        messages: [createAssistantMessage(INITIAL_ASSISTANT_MESSAGE.content)]
       };
     case 'TRIM': {
       const limit = action.payload ?? state.historyWindow;
