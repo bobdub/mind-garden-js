@@ -1,32 +1,24 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Send, Brain, User } from 'lucide-react';
+import { Send, Brain, User, Scissors, Trash2 } from 'lucide-react';
 import { SelfLearningLLM } from '@/lib/neural/SelfLearningLLM';
-
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  tags?: string[];
-  timestamp: number;
-}
+import { useChat } from '@/context/ChatContext';
+import type { ChatMessage } from '@/types/chat';
 
 interface ChatInterfaceProps {
   llm: SelfLearningLLM;
 }
 
 export const ChatInterface = ({ llm }: ChatInterfaceProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: "Hello! I'm a self-learning LLM. I'll learn from our conversations. Try teaching me something!",
-      timestamp: Date.now()
-    }
-  ]);
+  const { messages, addMessage, clearMessages, trimMessages, historyWindow } = useChat();
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const canTrimHistory = useMemo(() => messages.length > historyWindow + 1, [messages.length, historyWindow]);
+  const canClearHistory = useMemo(() => messages.length > 1, [messages.length]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -39,42 +31,70 @@ export const ChatInterface = ({ llm }: ChatInterfaceProps) => {
   const handleSend = async () => {
     if (!input.trim() || isProcessing) return;
 
-    const userMessage: Message = {
+    const trimmedInput = input.trim();
+    if (!trimmedInput) return;
+
+    const userMessage: ChatMessage = {
       role: 'user',
-      content: input,
-      tags: llm.tag(input),
+      content: trimmedInput,
+      tags: llm.tag(trimmedInput),
       timestamp: Date.now()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const pendingHistory = [...messages, userMessage];
+
+    addMessage(userMessage);
     setInput('');
     setIsProcessing(true);
 
     // Simulate thinking time
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    const response = llm.respond(input);
-    const assistantMessage: Message = {
+    const response = llm.respond(trimmedInput, pendingHistory, historyWindow);
+    const assistantMessage: ChatMessage = {
       role: 'assistant',
       content: response,
       timestamp: Date.now()
     };
 
-    setMessages(prev => [...prev, assistantMessage]);
+    addMessage(assistantMessage);
     setIsProcessing(false);
   };
 
   return (
     <Card className="flex flex-col h-[600px] bg-card shadow-card">
-      <div className="flex items-center gap-2 p-4 border-b border-border">
-        <Brain className="w-5 h-5 text-primary" />
-        <h2 className="text-lg font-semibold">Neural Chat</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Brain className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-semibold">Neural Chat</h2>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => trimMessages(historyWindow)}
+            disabled={!canTrimHistory}
+          >
+            <Scissors className="w-4 h-4" />
+            <span className="hidden sm:inline">Trim to {historyWindow}</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearMessages}
+            disabled={!canClearHistory}
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Clear Chat</span>
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message, index) => (
           <div
-            key={index}
+            key={`${message.timestamp}-${index}`}
             className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {message.role === 'assistant' && (
@@ -91,7 +111,7 @@ export const ChatInterface = ({ llm }: ChatInterfaceProps) => {
                     : 'glass-card'
                 }`}
               >
-                <p className="text-sm">{message.content}</p>
+                <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
               </div>
               
               {message.tags && message.tags.length > 0 && (
