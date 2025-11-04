@@ -6,7 +6,8 @@ import { Send, Brain, User, Scissors, Trash2, ThumbsUp, ThumbsDown, AlertTriangl
 import { SelfLearningLLM } from '@/lib/neural/SelfLearningLLM';
 import { useChat } from '@/context/ChatContext';
 import type { ChatMessage } from '@/types/chat';
-import { FeedbackLogger, type FeedbackKind } from '@/lib/feedback/FeedbackLogger';
+import { FeedbackLogger } from '@/lib/feedback/FeedbackLogger';
+import type { FeedbackKind } from '@/types/feedback';
 
 interface ChatInterfaceProps {
   llm: SelfLearningLLM;

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,11 +7,16 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { ChatProvider } from "@/context/ChatContext";
+import { AnalyticsTracker } from "@/lib/analytics/AnalyticsTracker";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const basename = import.meta.env.BASE_URL;
+
+  useEffect(() => {
+    AnalyticsTracker.trackSessionStart();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

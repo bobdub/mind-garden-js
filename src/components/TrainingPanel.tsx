@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { BookOpen, Zap } from 'lucide-react';
 import { SelfLearningLLM } from '@/lib/neural/SelfLearningLLM';
+import { AnalyticsTracker } from '@/lib/analytics/AnalyticsTracker';
 import { toast } from 'sonner';
 
 interface TrainingPanelProps {
@@ -17,20 +18,35 @@ export const TrainingPanel = ({ llm, onTrained }: TrainingPanelProps) => {
   const [isTraining, setIsTraining] = useState(false);
 
   const handleTrain = async () => {
-    if (!prompt.trim() || !response.trim()) {
+    const trimmedPrompt = prompt.trim();
+    const trimmedResponse = response.trim();
+
+    if (!trimmedPrompt || !trimmedResponse) {
       toast.error('Please provide both prompt and response');
       return;
     }
 
     setIsTraining(true);
-    
+
     // Simulate training time
     await new Promise(resolve => setTimeout(resolve, 800));
-    
-    llm.learnFrom(prompt, response);
-    
+
+    llm.learnFrom(trimmedPrompt, trimmedResponse);
+
+    const tags = llm.tag(trimmedPrompt);
+    const promptWords = trimmedPrompt ? trimmedPrompt.split(/\s+/).filter(Boolean).length : 0;
+    const responseWords = trimmedResponse ? trimmedResponse.split(/\s+/).filter(Boolean).length : 0;
+
+    AnalyticsTracker.trackLessonCompleted({
+      promptLength: trimmedPrompt.length,
+      responseLength: trimmedResponse.length,
+      promptWordCount: promptWords,
+      responseWordCount: responseWords,
+      tagCount: tags.length
+    });
+
     toast.success('Training completed! The model learned this pattern.', {
-      description: `Prompt: "${prompt.substring(0, 30)}..."`,
+      description: `Prompt: "${trimmedPrompt.substring(0, 30)}..."`,
     });
 
     setPrompt('');
