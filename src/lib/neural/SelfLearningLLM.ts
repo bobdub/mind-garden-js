@@ -119,38 +119,39 @@ export class SelfLearningLLM {
       this.conversationContext.shift();
     }
     
-    // Find best match using contextual similarity
-    let bestMatch: TrainingEntry | null = null;
-    let bestScore = 0;
-    
-    for (const memory of memories) {
-      const tagSimilarity = this.tagger.similarity(tags, memory.tags);
-      const contextScore = this.getContextScore(prompt, memory);
-      const combinedScore = tagSimilarity * 0.7 + contextScore * 0.3;
-      
-      if (combinedScore > bestScore) {
-        bestScore = combinedScore;
-        bestMatch = memory;
-      }
-    }
-
-    // Use memory if score is decent
-    if (bestMatch && bestScore > 0.2) {
-      return bestMatch.response;
-    }
-
-    // Try neural network prediction
+    // If we have training data, always try to find a match
     if (memories.length > 0) {
+      // Find best match using contextual similarity
+      let bestMatch: TrainingEntry | null = null;
+      let bestScore = 0;
+      
+      for (const memory of memories) {
+        const tagSimilarity = this.tagger.similarity(tags, memory.tags);
+        const contextScore = this.getContextScore(prompt, memory);
+        const combinedScore = tagSimilarity * 0.8 + contextScore * 0.2;
+        
+        if (combinedScore > bestScore) {
+          bestScore = combinedScore;
+          bestMatch = memory;
+        }
+      }
+
+      // Use best match if we found any similarity at all
+      if (bestMatch && bestScore > 0.05) {
+        return bestMatch.response;
+      }
+
+      // Always try neural prediction if we have training data
       const inputVector = this.vectorize(prompt);
       const output = this.predict(inputVector);
       const prediction = this.devectorize(output);
       
-      if (prediction && prediction.length > 3) {
+      if (prediction) {
         return prediction;
       }
     }
 
-    // Last resort: intent-based fallback
+    // Only use fallback if truly no training data
     return this.getIntentBasedFallback(tags, prompt);
   }
   
@@ -173,29 +174,7 @@ export class SelfLearningLLM {
   }
   
   private getIntentBasedFallback(tags: string[], prompt: string): string {
-    const lowerPrompt = prompt.toLowerCase().trim();
-    const hasIntent = (intent: string) => tags.some(t => t.includes(`intent:${intent}`));
-    
-    // Only use greeting fallback for very clear greetings
-    if (hasIntent('greeting') && lowerPrompt.length < 20 && 
-        (lowerPrompt.startsWith('hello') || lowerPrompt.startsWith('hi') || 
-         lowerPrompt.startsWith('hey') || lowerPrompt === 'greetings')) {
-      return "Hello! I'm learning to chat. You can teach me new responses in the Training Panel!";
-    }
-    
-    // Only use farewell for clear goodbyes
-    if (hasIntent('farewell') && lowerPrompt.length < 15 &&
-        (lowerPrompt.startsWith('bye') || lowerPrompt.startsWith('goodbye'))) {
-      return "Goodbye! Thanks for chatting with me.";
-    }
-    
-    // For everything else, try to echo with variation
-    const words = prompt.split(/\s+/).filter(w => w.length > 2);
-    if (words.length > 0) {
-      return `Interesting! You mentioned "${words[0]}". I'm still learning about this - teach me more?`;
-    }
-    
-    return "I'm still learning. Try teaching me this in the Training Panel!";
+    return "I'm still learning. Try teaching me in the Training Panel!";
   }
 
   private devectorize(vector: number[]): string {
@@ -203,11 +182,16 @@ export class SelfLearningLLM {
     
     this.vocabulary.forEach((index, word) => {
       const vecIndex = index % this.vectorSize;
-      words.push([word, vector[vecIndex]]);
+      if (vector[vecIndex] > 0.1) { // Only include words with significant activation
+        words.push([word, vector[vecIndex]]);
+      }
     });
 
     words.sort((a, b) => b[1] - a[1]);
-    return words.slice(0, 5).map(w => w[0]).join(' ');
+    const topWords = words.slice(0, 8).map(w => w[0]);
+    
+    // Create a more natural response
+    return topWords.length > 0 ? topWords.join(' ') : '';
   }
 
   getMemories(): TrainingEntry[] {
