@@ -14,10 +14,10 @@ This project is a lightweight, logic-driven, self-learning language model built 
 
 | Spec Version | Document | Ready State (0.1.1) | Pending Upgrade | Linked Milestone |
 |--------------|----------|----------------------|-----------------|------------------|
-| 0.1.1        | Core Architecture (this doc) | Baseline neuron, memory, and tagging pipeline documented. | Expand adaptive memory pruning and scalable persistence notes. | v0.2.0 Architecture Alignment |
-| 0.1.1        | Personality.md | Behavioral directives synchronized with current Q-Score logic. | Add calibration telemetry hooks for empathic tone analytics. | v0.2.0 Personality Calibration |
-| 0.1.1        | Sayntax.md | Protocol grammar defined for request/response loops. | Normalize inter-agent negotiation patterns. | v0.3.0 Protocol Normalization |
-| 0.1.1        | q-idea.md | Q-Score framing for ideation captured. | Integrate deployment gating metrics for release cadences. | v0.3.0 Q-Score Deployment |
+| 0.1.1        | Core Architecture (this doc) | Baseline neuron, memory, and tagging pipeline documented. | Expand adaptive memory pruning and scalable persistence notes **(Roadmap)**. | v0.2.0 Architecture Alignment |
+| 0.1.1        | Personality.md | Behavioral directives synchronized with current Q-Score logic. | Add calibration telemetry hooks for empathic tone analytics **(Roadmap)**. | v0.2.0 Personality Calibration |
+| 0.1.1        | Sayntax.md | Protocol grammar defined for request/response loops. | Normalize inter-agent negotiation patterns **(Roadmap)**. | v0.3.0 Protocol Normalization |
+| 0.1.1        | q-idea.md | Q-Score framing for ideation captured. | Integrate deployment gating metrics for release cadences **(Roadmap)**. | v0.3.0 Q-Score Deployment |
 
 Use this matrix to trace how incremental updates in each companion document converge toward the upcoming roadmap checkpoints.
 
@@ -49,65 +49,78 @@ Use this matrix to trace how incremental updates in each companion document conv
 
 ### 🧭 System Architecture Spec
 
+The following signatures mirror the concrete implementations inside `src/lib/neural`. Any additional behavior mentioned beyond
+these contracts is marked as **(Roadmap)** to flag speculative guidance.
+
 ```ts
-interface Neuron {
+class Neuron {
   weights: number[];
   bias: number;
+  constructor(weights?: number[], bias?: number);
   activate(inputs: number[]): number;
-  adjust(params: { inputs: number[]; error: number; learningRate?: number }): void;
+  adjust(inputs: number[], error: number, learningRate?: number): void;
 }
 
-// Parameter contracts
-// - activate: expects inputs.length === weights.length and values normalized between 0 and 1.
-// - adjust.learningRate defaults to 0.1 when omitted.
+// - activate: expects inputs.length === weights.length.
+// - adjust: learningRate defaults to 0.1.
 
-interface Layer {
+class Layer {
   neurons: Neuron[];
+  constructor(size: number, inputSize: number);
   forward(inputs: number[]): number[];
-  train(params: { inputs: number[]; errors: number[]; learningRate: number }): void;
+  train(inputs: number[], errors: number[], learningRate: number): number[];
 }
 
-// - forward: propagates inputs sequentially through all neurons.
-// - train: errors must align with neurons.length; learningRate > 0.
+// - train: propagates errors backward and returns the accumulated input errors.
 
-interface Tagger {
-  extractTags(payload: { text: string; locale?: string }): string[];
+class Tagger {
+  extractTags(text: string): string[];
+  similarity(tags1: string[], tags2: string[]): number;
 }
 
-// - text: raw user prompt; locale defaults to "en".
+// - extractTags: accepts a raw prompt string and derives keyword + intent markers.
 
-interface Memory<TValue = unknown> {
-  remember(entry: { key: string; value: TValue; tags?: string[] }): void;
-  recall(query: { key: string }): TValue | undefined;
-  forget(target: { key: string }): void;
-}
-
-interface LocalMemory<TValue = unknown> extends Memory<TValue> {
-  namespace: string;
+class LocalMemory<TValue = unknown> {
+  constructor(namespace?: string);
+  remember(key: string, value: TValue): void;
+  recall(key: string): TValue | null;
+  forget(key: string): void;
   listKeys(): string[];
+  clear(): void;
 }
 
-// - namespace: storage isolation identifier; immutable post-construction.
-// - remember: serializes value via JSON.stringify before persistence.
+// - remember/recall: values are persisted via `localStorage` JSON serialization.
 
-interface SelfLearningLLM {
-  readonly inputSize: number;
-  readonly hiddenSize: number;
-  readonly outputSize: number;
-  predict(input: { vector: number[] }): number[];
-  train(params: {
-    vector: number[];
-    target: number[];
-    learningRate?: number;
-  }): { errorVector: number[] };
-  learnFrom(example: { prompt: string; response: string }): void;
-  vectorize(payload: { text: string }): number[];
-  tag(payload: { text: string }): string[];
+interface TrainingEntry {
+  prompt: string;
+  response: string;
+  tags: string[];
+  timestamp: number;
 }
 
-// - predict: vector length must equal inputSize.
-// - train: target length must equal outputSize; learningRate defaults to 0.1.
-// - learnFrom: stores prompt/response pairs in Memory and triggers train().
+class SelfLearningLLM {
+  constructor(inputSize?: number, hiddenSize?: number, outputSize?: number);
+  vectorize(text: string): number[];
+  tag(text: string): string[];
+  predict(input: number[]): number[];
+  train(input: number[], target: number[], learningRate?: number): void;
+  learnFrom(prompt: string, response: string): void;
+  respond(prompt: string, history?: ChatMessage[], windowSize?: number): string;
+  getMemories(): TrainingEntry[];
+  clearMemory(): void;
+  getStats(): {
+    totalMemories: number;
+    vocabularySize: number;
+    recentMemories: TrainingEntry[];
+  };
+}
+
+// - train: runs in-place backpropagation; returns void.
+// - learnFrom: performs ten training epochs before persisting a new memory entry.
+// - respond: consults memory for similar prompts before falling back to neural output.
+//   Uses `ChatMessage` from `src/types/chat` for conversation history entries.
+// - clearMemory: wipes both stored memories and the learned vocabulary.
+// - getStats: exposes basic telemetry for UI diagnostics (expanded analytics **(Roadmap)**).
 ```
 
 ---
@@ -132,7 +145,7 @@ sequenceDiagram
 ### Stage Preconditions & Postconditions
 
 1. **Input Tagging**
-   - *Pre*: Raw prompt string provided; Tagger configured with locale lexicon.
+   - *Pre*: Raw prompt string provided; Tagger seeded with its default keyword heuristics.
    - *Post*: Tags array and normalized vector ready for the model.
 2. **Forward Pass**
    - *Pre*: Input vector length equals `inputSize`; weights and biases initialized.
