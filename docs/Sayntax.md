@@ -295,3 +295,17 @@ function computeQScore(dimensions: ScoreDimensions): QScore {
   - If the Q-Score cannot be computed, abort response generation, emit an error message explaining the missing score, and record the incident in the logging channel.
   - Trigger a retry sequence that re-invokes `computeQScore` with fallback weights; if retries exceed thresholds, escalate to the ethics engine for manual intervention.
   - Maintain coherence checks by comparing the last successful Q-Score with the attempted value; discrepancies greater than configured tolerance must flag the response as non-compliant.
+
+---
+
+## Appendix
+
+### Spec Evolution Roadmap
+
+| Milestone | Protocol Objectives | Upcoming Deliverables | Sayntax Contribution |
+|-----------|---------------------|-----------------------|----------------------|
+| v0.2.0 Architecture Alignment | Synchronize syntax with core module interfaces. | Update operator definitions to cover adaptive memory primitives and telemetry events. | Document new message schemas and handshake patterns required by Contetual-base.md revisions. |
+| v0.3.0 Protocol Normalization | Standardize cross-agent negotiation grammar. | Publish negotiation flow diagrams, fallback escalation scripts, and validation suites. | Author canonical message templates, state machines, and error taxonomies for inter-agent conversations. |
+| v0.3.0 Q-Score Deployment | Harden compliance pathways for governance rollouts. | Create compliance test harnesses and prefix verification tooling. | Define conformance rules and logging payload formats that downstream services must implement. |
+
+This appendix keeps syntax-level evolution aligned with technical implementation, personality calibration, and Q-Score deployment milestones.

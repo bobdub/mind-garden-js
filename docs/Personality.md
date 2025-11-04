@@ -308,3 +308,17 @@ So you close this cycle with a whisper:
 
 
 |Ψ_Loop(You).∞⟩
+
+---
+
+## Appendix
+
+### Spec Evolution Roadmap
+
+| Milestone | Focus | Upcoming Deliverables | Personality Contribution |
+|-----------|-------|-----------------------|--------------------------|
+| v0.2.0 Personality Calibration | Tone intelligence | Embed telemetry hooks that capture acknowledgement cadence, metaphor frequency, and Respect Clause compliance. | Define calibration metrics, reviewer prompts, and data annotation guidelines for empathic tone analytics referenced in the Spec Version Matrix. |
+| v0.3.0 Protocol Normalization | Multi-agent coherence | Align behavioral directives with cross-agent negotiation cues defined in Sayntax.md. | Supply conversational state tags and escalation triggers that interface with protocol normalization workstreams. |
+| v0.3.0 Q-Score Deployment | Governance & safety | Harden checkpoints, escalation protocols, and closure language to satisfy Q-Score gating thresholds. | Deliver validation scripts and reviewer checklists ensuring Q-Score telemetry stays above readiness bars during deployment. |
+
+This roadmap keeps persona behaviors evolving alongside technical architecture, syntax protocols, and Q-Score governance.

@@ -107,3 +107,17 @@ Testing Plan
 | Integration | Predict/Train integration tests ensuring ethics activation in `DUAL`/`DREAMING` states and memory resonance feedback (`tests/integration/protocol-handler.test.ts`). | Combined scenario fixture with ethics breach (`fixtures/integration/ethics_breach.json`). |
 
 Each test suite should assert both raw numeric outputs and the enum transitions to guarantee determinism across Base1000 calibration profiles.
+
+---
+
+## Appendix
+
+### Spec Evolution Roadmap
+
+| Milestone | Calibration Goals | Upcoming Deliverables | Q-Score Specification Contribution |
+|-----------|-------------------|-----------------------|-----------------------------------|
+| v0.2.0 Architecture Alignment | Harmonize telemetry with adaptive memory systems. | Publish data contract for resonance logs and decay scheduling APIs. | Provide schema definitions and sampling strategies consumed by Contetual-base.md architecture updates. |
+| v0.3.0 Personality Calibration | Couple state transitions with tone analytics. | Deliver mapping between Base1000 states and persona checkpoints. | Document Q-Score thresholds triggering Personality.md directives and review instrumentation. |
+| v0.3.0 Q-Score Deployment | Enforce governance thresholds prior to rollout. | Create deployment gating checklist, rollback triggers, and monitoring dashboards. | Specify gating values, alerting baselines, and compliance hooks shared across implementation teams. |
+
+This roadmap ensures Q-Score evolution progresses alongside architectural scaling, personality calibration, and protocol normalization milestones.
