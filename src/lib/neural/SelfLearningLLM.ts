@@ -17,6 +17,7 @@ export class SelfLearningLLM {
   private tagger: Tagger;
   private vectorSize: number;
   private vocabulary: Map<string, number>;
+  private conversationContext: string[];
 
   constructor(inputSize: number = 32, hiddenSize: number = 16, outputSize: number = 32) {
     this.vectorSize = inputSize;
@@ -26,6 +27,7 @@ export class SelfLearningLLM {
     this.memory = new LocalMemory('SelfLearningLLM');
     this.tagger = new Tagger();
     this.vocabulary = new Map();
+    this.conversationContext = [];
     
     this.loadVocabulary();
   }
@@ -108,24 +110,70 @@ export class SelfLearningLLM {
   }
 
   respond(prompt: string): string {
-    const inputVector = this.vectorize(prompt);
     const tags = this.tag(prompt);
-    
-    // Check memory for similar prompts
     const memories = this.getMemories();
-    const similar = memories.find(m => 
-      this.tagger.similarity(tags, m.tags) > 0.5
-    );
-
-    if (similar) {
-      return similar.response;
+    
+    // Add to conversation context
+    this.conversationContext.push(prompt.toLowerCase());
+    if (this.conversationContext.length > 5) {
+      this.conversationContext.shift();
+    }
+    
+    // Find best match using contextual similarity
+    let bestMatch: TrainingEntry | null = null;
+    let bestScore = 0;
+    
+    for (const memory of memories) {
+      const tagSimilarity = this.tagger.similarity(tags, memory.tags);
+      const contextScore = this.getContextScore(prompt, memory);
+      const combinedScore = tagSimilarity * 0.6 + contextScore * 0.4;
+      
+      if (combinedScore > bestScore && combinedScore > 0.3) {
+        bestScore = combinedScore;
+        bestMatch = memory;
+      }
     }
 
-    // Use neural network prediction
-    const output = this.predict(inputVector);
-    const prediction = this.devectorize(output);
+    if (bestMatch) {
+      return bestMatch.response;
+    }
+
+    // Fallback responses based on intent
+    return this.getIntentBasedFallback(tags);
+  }
+  
+  private getContextScore(prompt: string, memory: TrainingEntry): number {
+    const promptWords = new Set(prompt.toLowerCase().split(/\s+/));
+    const memoryWords = new Set(memory.prompt.toLowerCase().split(/\s+/));
     
-    return prediction || "I'm still learning. Can you teach me how to respond?";
+    // Check if any recent context words appear in the memory
+    const contextRelevance = this.conversationContext.some(ctx => 
+      memory.prompt.toLowerCase().includes(ctx) || 
+      ctx.includes(memory.prompt.toLowerCase().split(/\s+/)[0])
+    ) ? 0.5 : 0;
+    
+    // Word overlap score
+    const intersection = [...promptWords].filter(w => memoryWords.has(w)).length;
+    const union = new Set([...promptWords, ...memoryWords]).size;
+    const wordScore = union > 0 ? intersection / union : 0;
+    
+    return Math.max(contextRelevance, wordScore);
+  }
+  
+  private getIntentBasedFallback(tags: string[]): string {
+    const hasIntent = (intent: string) => tags.some(t => t.includes(`intent:${intent}`));
+    
+    if (hasIntent('greeting')) {
+      return "Hello! I'm learning to chat. You can teach me new responses in the Training Panel!";
+    }
+    if (hasIntent('question')) {
+      return "I don't know yet, but you can teach me! Use the Training Panel to show me how to respond.";
+    }
+    if (hasIntent('farewell')) {
+      return "Goodbye! Thanks for chatting with me.";
+    }
+    
+    return "I'm still learning. Try teaching me this in the Training Panel!";
   }
 
   private devectorize(vector: number[]): string {
@@ -147,6 +195,7 @@ export class SelfLearningLLM {
   clearMemory(): void {
     this.memory.clear();
     this.vocabulary.clear();
+    this.conversationContext = [];
   }
 
   getStats() {
