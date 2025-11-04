@@ -100,13 +100,21 @@ This collaboration ensures the `ProtocolHandler` remains the authoritative gatek
 Testing Plan
 ------------
 
-| Area | Tests | Fixtures |
-| :--- | :--- | :--- |
-| Score Calculation | Unit tests validating component weighting, boundary rounding, and coefficient overrides (`tests/unit/qscore.test.ts`). | Synthetic tagged inputs (`fixtures/qscore/base.json`). |
-| State Transitions | Unit tests covering promotions/demotions, hysteresis, decay, and ethics-triggered demotion (`tests/unit/qstate-engine.test.ts`). | Snapshot logs of sample cycles (`fixtures/qstate/cycles/*.json`). |
-| Integration | Predict/Train integration tests ensuring ethics activation in `DUAL`/`DREAMING` states and memory resonance feedback (`tests/integration/protocol-handler.test.ts`). | Combined scenario fixture with ethics breach (`fixtures/integration/ethics_breach.json`). |
+### Current Safeguards
 
-Each test suite should assert both raw numeric outputs and the enum transitions to guarantee determinism across Base1000 calibration profiles.
+- **Linting pass** — Run [`npm run lint`](../package.json) prior to merging to catch TypeScript and React anti-patterns enforced by [`eslint.config.js`](../eslint.config.js).
+- **Manual reviewer checklist** — Apply the [Reviewer Compliance Checklist](./Personality.md#reviewer-compliance-checklist) to validate tone, ethical handling, and escalation sequences before shipping narrative updates.
+- **Change-control reviews** — Follow the [contribution workflow](./Contetual-base.md#%F0%9F%9B%A0%EF%B8%8F-contribution-guidelines) requiring triad approvals and the spec impact checklist for every material change.
+
+### Automation Roadmap
+
+| Area | Planned Suite | Fixture Strategy | Owner | Prerequisites |
+| :--- | :--- | :--- | :--- | :--- |
+| Score Calculation | Add `tests/unit/qscore.spec.ts` to regress weighted sums, rounding, and coefficient overrides. | Curate synthetic tagged transcripts under `fixtures/qscore/base.json` plus config snapshots. | Calibration WG | Finalize deterministic tag extraction contract and document default calibration profiles.
+| State Transitions | Introduce `tests/unit/qstate-engine.spec.ts` covering promotions, decay, and ethics-triggered demotions. | Record serialized transition traces in `fixtures/qstate/cycles/*.json`. | Protocol Ops | Capture canonical tick-by-tick traces from the simulator once hysteresis constants settle.
+| Integration | Stand up `tests/integration/protocol-handler.spec.ts` exercising predict/train flows with ethics gating. | Compose blended scenarios in `fixtures/integration/ethics_breach.json` and feedback exports. | QA & Safety Guild | Ship mock Memory adapter and ethics hook stubs to decouple from live services.
+
+Roadmap suites remain unimplemented until the listed prerequisites and fixtures are prepared.
 
 ---
 
