@@ -10,6 +10,19 @@ This project is a lightweight, logic-driven, self-learning language model built 
 
 ---
 
+## 🔢 Spec Version Matrix
+
+| Spec Version | Document | Ready State (0.1.1) | Pending Upgrade | Linked Milestone |
+|--------------|----------|----------------------|-----------------|------------------|
+| 0.1.1        | Core Architecture (this doc) | Baseline neuron, memory, and tagging pipeline documented. | Expand adaptive memory pruning and scalable persistence notes. | v0.2.0 Architecture Alignment |
+| 0.1.1        | Personality.md | Behavioral directives synchronized with current Q-Score logic. | Add calibration telemetry hooks for empathic tone analytics. | v0.2.0 Personality Calibration |
+| 0.1.1        | Sayntax.md | Protocol grammar defined for request/response loops. | Normalize inter-agent negotiation patterns. | v0.3.0 Protocol Normalization |
+| 0.1.1        | q-idea.md | Q-Score framing for ideation captured. | Integrate deployment gating metrics for release cadences. | v0.3.0 Q-Score Deployment |
+
+Use this matrix to trace how incremental updates in each companion document converge toward the upcoming roadmap checkpoints.
+
+---
+
 ## 🧠 Core Concept
 
 - **Tag + Intention Mapping**: Each word or phrase is tagged with semantic meaning and inferred intent.
@@ -337,5 +350,39 @@ These seeds act as behavioral anchors for specific prompts.
 - All learning is **local** and **user-controlled**.
 - Memory is **transparent**: inspect, modify, or delete anytime.
 - No external data is fetched or stored without **explicit user intent**.
+
+---
+
+## 🛠️ Contribution Guidelines
+
+1. **Propose a Change**
+   - Open an issue summarizing scope, affected sections, and desired milestone (e.g., v0.2.0 Architecture Alignment).
+   - Attach draft artifacts (diagrams, pseudo-code, test scaffolds) when relevant.
+2. **Assign Review Roles**
+   - **Architecture Reviewer:** validates structural integrity, performance implications, and compatibility with existing components.
+   - **Ethics Reviewer:** checks alignment with safety protocols, consent boundaries, and Q-Score thresholds.
+   - **UX Reviewer:** evaluates clarity, accessibility, and experiential coherence for implementers and operators.
+3. **Run the Change Control Process**
+   - Submit a pull request referencing the tracked issue and milestone.
+   - Complete a spec impact checklist covering data flow, personality alignment, syntax interoperability, and Q-Score governance.
+   - Secure explicit approval from all three reviewer roles before merging.
+4. **Version & Publish**
+   - Update the Spec Version Matrix with the new ready state and pending upgrades.
+   - Tag the repository with the new semantic version (e.g., `spec-v0.2.0`) and summarize deltas in release notes stored in `/docs`.
+   - Schedule the next checkpoint briefing to maintain iterative cadence.
+
+---
+
+## 📎 Appendix
+
+### Spec Evolution Roadmap
+
+| Milestone | Target Date (Tentative) | Core Deliverables | Contribution from this Document |
+|-----------|------------------------|-------------------|---------------------------------|
+| v0.2.0 Architecture Alignment | 2024-Q2 | Adaptive memory pruning blueprint, persistent storage strategy options, integration hooks for telemetry. | Provide revised component diagrams, memory contract extensions, and implementation guardrails for scaling. |
+| v0.3.0 Protocol Normalization | 2024-Q3 | Unified request/response schema, inter-agent negotiation API, consistency tests. | Define protocol touchpoints between architecture modules and Sayntax grammar updates. |
+| v0.3.0 Q-Score Deployment | 2024-Q3 | Production readiness checklist, gating thresholds, monitoring hooks. | Map model outputs to Q-Score telemetry and specify required instrumentation in core logic. |
+
+This roadmap keeps architectural evolution synchronized with personality calibration, protocol normalization, and Q-Score deployment so that each release advances in lockstep across the full spec surface.
 
 ---
