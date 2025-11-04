@@ -1,6 +1,7 @@
 import { Layer } from './Layer';
 import { LocalMemory } from './LocalMemory';
 import { Tagger } from './Tagger';
+import type { ChatMessage } from '@/types/chat';
 
 export interface TrainingEntry {
   prompt: string;
@@ -107,15 +108,22 @@ export class SelfLearningLLM {
     this.memory.remember('training_data', memories);
   }
 
-  respond(prompt: string): string {
-    const inputVector = this.vectorize(prompt);
-    const tags = this.tag(prompt);
-    
+  respond(prompt: string, history: ChatMessage[] = [], windowSize: number = 6): string {
+    const contextWindow = windowSize > 0 ? history.slice(-windowSize) : [];
+    const contextText = contextWindow
+      .map((entry) => `${entry.role === 'user' ? 'User' : 'Assistant'}: ${entry.content}`)
+      .join(' ')
+      .trim();
+    const contextualPrompt = contextText
+      ? `${contextText} User: ${prompt}`
+      : prompt;
+
+    const inputVector = this.vectorize(contextualPrompt);
+    const tags = this.tag(contextualPrompt);
+
     // Check memory for similar prompts
     const memories = this.getMemories();
-    const similar = memories.find(m => 
-      this.tagger.similarity(tags, m.tags) > 0.5
-    );
+    const similar = memories.find((m) => this.tagger.similarity(tags, m.tags) > 0.5);
 
     if (similar) {
       return similar.response;
@@ -124,8 +132,15 @@ export class SelfLearningLLM {
     // Use neural network prediction
     const output = this.predict(inputVector);
     const prediction = this.devectorize(output);
-    
-    return prediction || "I'm still learning. Can you teach me how to respond?";
+
+    if (prediction) {
+      return prediction;
+    }
+
+    // Fall back to the most recent assistant message if available
+    const lastAssistant = [...contextWindow].reverse().find((entry) => entry.role === 'assistant');
+
+    return lastAssistant?.content || "I'm still learning. Can you teach me how to respond?";
   }
 
   private devectorize(vector: number[]): string {
