@@ -146,7 +146,11 @@ export class SelfLearningLLM {
       return prediction;
     }
 
-    return this.buildFallbackResponse(prompt, contextWindow);
+    return this.buildFallbackResponse(
+      prompt,
+      contextWindow,
+      this.getRecentAssistantMessages(contextWindow, 3)
+    );
   }
 
   private devectorize(vector: number[]): string {
@@ -185,49 +189,104 @@ export class SelfLearningLLM {
     history: ChatMessage[]
   ): string {
     const trimmed = response?.trim();
+    const recentAssistantMessages = this.getRecentAssistantMessages(history, 3);
+
     if (!trimmed) {
-      return '';
+      return this.buildFallbackResponse(prompt, history, recentAssistantMessages);
     }
 
-    const lastAssistant = this.getLastAssistantMessage(history)?.content?.trim();
-    if (lastAssistant && lastAssistant.localeCompare(trimmed, undefined, { sensitivity: 'accent' }) === 0) {
-      return this.buildFallbackResponse(prompt, history);
+    const isDuplicate = recentAssistantMessages.some(
+      (message) => message.localeCompare(trimmed, undefined, { sensitivity: 'accent' }) === 0
+    );
+
+    if (isDuplicate) {
+      return this.buildFallbackResponse(prompt, history, [...recentAssistantMessages, trimmed]);
     }
 
     return trimmed;
   }
 
-  private getLastAssistantMessage(history: ChatMessage[]): ChatMessage | undefined {
-    return [...history].reverse().find((entry) => entry.role === 'assistant');
+  private getRecentAssistantMessages(history: ChatMessage[], limit: number = 3): string[] {
+    const responses: string[] = [];
+
+    for (let i = history.length - 1; i >= 0 && responses.length < limit; i -= 1) {
+      const entry = history[i];
+      if (entry.role === 'assistant') {
+        const content = entry.content?.trim();
+        if (content) {
+          responses.push(content);
+        }
+      }
+    }
+
+    return responses;
   }
 
-  private buildFallbackResponse(prompt: string, history: ChatMessage[]): string {
+  private buildFallbackResponse(
+    prompt: string,
+    history: ChatMessage[],
+    disallowed: string[] = []
+  ): string {
     const cleaned = prompt.trim();
     const excerpt = cleaned.length > 140 ? `${cleaned.slice(0, 137)}…` : cleaned;
     const keywords = this.extractKeywords(cleaned, 3);
     const capitalizedKeywords = keywords.map((word) => word.charAt(0).toUpperCase() + word.slice(1));
 
-    const topic = capitalizedKeywords.length > 0
-      ? capitalizedKeywords.join(', ')
-      : 'that';
+    const topic = this.buildTopicPhrase(capitalizedKeywords);
+    const normalizedDisallowed = new Set(
+      disallowed.map((entry) => entry.trim().toLowerCase()).filter(Boolean)
+    );
 
-    const acknowledgement = capitalizedKeywords.length > 0
-      ? `I appreciate you bringing up ${topic}.`
-      : 'I appreciate you sharing that.';
+    const acknowledgementVariants = capitalizedKeywords.length > 0
+      ? [
+          `I appreciate you bringing up ${topic}.`,
+          `Thanks for opening up about ${topic}.`,
+          `Your perspective on ${topic} helps me understand where to focus.`
+        ]
+      : [
+          'I appreciate you sharing that.',
+          'Thank you for letting me know.',
+          'I’m listening and taking in what you’re saying.'
+        ];
 
-    const reflection = excerpt
-      ? `I'm understanding your message as focusing on "${excerpt}".`
-      : "I'm listening closely even if the details are still forming.";
+    const reflectionVariants = excerpt
+      ? [
+          `I'm understanding your message as focusing on "${excerpt}".`,
+          `It sounds like you're exploring "${excerpt}".`,
+          `I'm hearing curiosity around "${excerpt}".`
+        ]
+      : [
+          "I'm listening closely even if the details are still forming.",
+          "I'm here with you even as the ideas are taking shape.",
+          "Even if it's still unfolding, I'm following along with you."
+        ];
 
-    const invitations = [
+    const focus = this.buildFocusPrompt(topic, keywords);
+    const invitationVariants = [
       'How would you like us to explore this together?',
       'What outcome would feel most supportive for you here?',
-      'Let me know where you’d like to take the conversation next.'
+      `Is there a particular aspect of ${focus} you'd like to unpack next?`,
+      `Would it help if I shared a few perspectives on ${focus}, or is there another angle you’d prefer?`
     ];
 
-    const invitation = invitations[history.length % invitations.length];
+    const combinations: string[] = [];
+    acknowledgementVariants.forEach((acknowledgement) => {
+      reflectionVariants.forEach((reflection) => {
+        invitationVariants.forEach((invitation) => {
+          combinations.push(`${acknowledgement} ${reflection} ${invitation}`.trim());
+        });
+      });
+    });
 
-    return `${acknowledgement} ${reflection} ${invitation}`.trim();
+    const baseIndex = this.computeDeterministicIndex(cleaned || topic, combinations.length);
+    for (let offset = 0; offset < combinations.length; offset += 1) {
+      const candidate = combinations[(baseIndex + offset) % combinations.length];
+      if (!normalizedDisallowed.has(candidate.toLowerCase())) {
+        return candidate;
+      }
+    }
+
+    return combinations[baseIndex % combinations.length];
   }
 
   private extractKeywords(text: string, limit: number): string[] {
@@ -236,5 +295,51 @@ export class SelfLearningLLM {
       .split(/[^a-z0-9]+/)
       .filter((word) => word.length > 3)
       .slice(0, limit);
+  }
+
+  private buildTopicPhrase(keywords: string[]): string {
+    if (keywords.length === 0) {
+      return 'that';
+    }
+
+    if (keywords.length === 1) {
+      return keywords[0];
+    }
+
+    if (keywords.length === 2) {
+      return `${keywords[0]} and ${keywords[1]}`;
+    }
+
+    return `${keywords.slice(0, -1).join(', ')}, and ${keywords[keywords.length - 1]}`;
+  }
+
+  private buildFocusPrompt(topic: string, keywords: string[]): string {
+    if (keywords.length === 0) {
+      return 'this topic';
+    }
+
+    if (keywords.length === 1) {
+      return keywords[0];
+    }
+
+    if (keywords.length === 2) {
+      return `${keywords[0]} or ${keywords[1]}`;
+    }
+
+    const lowerTopic = topic.toLowerCase();
+    return `${keywords[0]} or related ideas around ${lowerTopic}`;
+  }
+
+  private computeDeterministicIndex(seed: string, modulo: number): number {
+    if (modulo <= 0) {
+      return 0;
+    }
+
+    let hash = 0;
+    for (let i = 0; i < seed.length; i += 1) {
+      hash = (hash * 31 + seed.charCodeAt(i)) % 2147483647;
+    }
+
+    return hash % modulo;
   }
 }
