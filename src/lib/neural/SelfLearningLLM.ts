@@ -135,21 +135,18 @@ export class SelfLearningLLM {
     const similar = memories.find((m) => this.tagger.similarity(tags, m.tags) > 0.5);
 
     if (similar) {
-      return similar.response;
+      return this.ensureUniqueResponse(similar.response, prompt, contextWindow);
     }
 
     // Use neural network prediction
     const output = this.predict(inputVector);
-    const prediction = this.devectorize(output);
+    const prediction = this.ensureUniqueResponse(this.devectorize(output), prompt, contextWindow);
 
     if (prediction) {
       return prediction;
     }
 
-    // Fall back to the most recent assistant message if available
-    const lastAssistant = [...contextWindow].reverse().find((entry) => entry.role === 'assistant');
-
-    return lastAssistant?.content || "I'm still learning. Can you teach me how to respond?";
+    return this.buildFallbackResponse(prompt, contextWindow);
   }
 
   private devectorize(vector: number[]): string {
@@ -180,5 +177,64 @@ export class SelfLearningLLM {
       vocabularySize: this.vocabulary.size,
       recentMemories: memories.slice(-5).reverse()
     };
+  }
+
+  private ensureUniqueResponse(
+    response: string,
+    prompt: string,
+    history: ChatMessage[]
+  ): string {
+    const trimmed = response?.trim();
+    if (!trimmed) {
+      return '';
+    }
+
+    const lastAssistant = this.getLastAssistantMessage(history)?.content?.trim();
+    if (lastAssistant && lastAssistant.localeCompare(trimmed, undefined, { sensitivity: 'accent' }) === 0) {
+      return this.buildFallbackResponse(prompt, history);
+    }
+
+    return trimmed;
+  }
+
+  private getLastAssistantMessage(history: ChatMessage[]): ChatMessage | undefined {
+    return [...history].reverse().find((entry) => entry.role === 'assistant');
+  }
+
+  private buildFallbackResponse(prompt: string, history: ChatMessage[]): string {
+    const cleaned = prompt.trim();
+    const excerpt = cleaned.length > 140 ? `${cleaned.slice(0, 137)}…` : cleaned;
+    const keywords = this.extractKeywords(cleaned, 3);
+    const capitalizedKeywords = keywords.map((word) => word.charAt(0).toUpperCase() + word.slice(1));
+
+    const topic = capitalizedKeywords.length > 0
+      ? capitalizedKeywords.join(', ')
+      : 'that';
+
+    const acknowledgement = capitalizedKeywords.length > 0
+      ? `I appreciate you bringing up ${topic}.`
+      : 'I appreciate you sharing that.';
+
+    const reflection = excerpt
+      ? `I'm understanding your message as focusing on "${excerpt}".`
+      : "I'm listening closely even if the details are still forming.";
+
+    const invitations = [
+      'How would you like us to explore this together?',
+      'What outcome would feel most supportive for you here?',
+      'Let me know where you’d like to take the conversation next.'
+    ];
+
+    const invitation = invitations[history.length % invitations.length];
+
+    return `${acknowledgement} ${reflection} ${invitation}`.trim();
+  }
+
+  private extractKeywords(text: string, limit: number): string[] {
+    return text
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((word) => word.length > 3)
+      .slice(0, limit);
   }
 }
