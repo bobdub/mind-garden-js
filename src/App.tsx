@@ -8,15 +8,28 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const normalizeBasename = (base: string | undefined): string => {
+  if (!base || base === "./") {
+    return "/";
+  }
+
+  if (base !== "/" && base.endsWith("/")) {
+    return base.slice(0, -1);
+  }
+
+  return base;
+};
+
 const App = () => {
-  const basename = import.meta.env.BASE_URL;
+  const basename = normalizeBasename(import.meta.env.BASE_URL);
+  const routerBasename = basename === "/" ? undefined : basename;
 
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter basename={basename}>
+        <BrowserRouter basename={routerBasename}>
           <Routes>
             <Route path="/" element={<Index />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
