@@ -1,6 +1,6 @@
 import type { ChatMessage } from '@/types/chat';
-
-export type FeedbackKind = 'thumbs_up' | 'thumbs_down' | 'issue';
+import type { FeedbackKind } from '@/types/feedback';
+import { AnalyticsTracker } from '@/lib/analytics/AnalyticsTracker';
 
 export interface FeedbackEvent {
   id: string;
@@ -102,6 +102,12 @@ export class FeedbackLogger {
 
     console.info('[feedback] captured event', event);
     await FeedbackStore.persist(event);
+    AnalyticsTracker.trackFeedbackSubmitted({
+      rating: kind,
+      messageIdSuffix: message.id.slice(-6),
+      commentProvided: typeof options.comment === 'string' && options.comment.trim().length > 0,
+      source: typeof options.metadata?.source === 'string' ? options.metadata?.source : undefined
+    });
     return event;
   }
 }
