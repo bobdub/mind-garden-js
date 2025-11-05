@@ -87,9 +87,16 @@ export class SelfLearningLLM {
   }
 
   learnFrom(prompt: string, response: string): void {
-    const inputVector = this.vectorize(prompt);
-    const targetVector = this.vectorize(response);
-    const tags = this.tag(prompt);
+    const trimmedPrompt = prompt.trim();
+    const trimmedResponse = response.trim();
+
+    if (!trimmedPrompt || !trimmedResponse) {
+      return;
+    }
+
+    const inputVector = this.vectorize(trimmedPrompt);
+    const targetVector = this.vectorize(trimmedResponse);
+    const tags = this.tag(trimmedPrompt);
 
     // Train the network
     for (let i = 0; i < 10; i++) {
@@ -98,14 +105,24 @@ export class SelfLearningLLM {
 
     // Store in memory
     const entry: TrainingEntry = {
-      prompt,
-      response,
+      prompt: trimmedPrompt,
+      response: trimmedResponse,
       tags,
       timestamp: Date.now()
     };
 
     const memories = this.getMemories();
-    memories.push(entry);
+    const existingIndex = memories.findIndex((memory) =>
+      memory.prompt.localeCompare(trimmedPrompt, undefined, { sensitivity: 'accent' }) === 0 &&
+      memory.response.localeCompare(trimmedResponse, undefined, { sensitivity: 'accent' }) === 0
+    );
+
+    if (existingIndex >= 0) {
+      memories[existingIndex] = { ...memories[existingIndex], timestamp: entry.timestamp, tags };
+    } else {
+      memories.push(entry);
+    }
+
     this.memory.remember('training_data', memories);
   }
 
@@ -135,7 +152,11 @@ export class SelfLearningLLM {
     const similar = memories.find((m) => this.tagger.similarity(tags, m.tags) > 0.5);
 
     if (similar) {
-      return this.ensureUniqueResponse(similar.response, prompt, contextWindow);
+      const adapted = this.ensureUniqueResponse(similar.response, prompt, contextWindow, similar.prompt);
+      if (adapted) {
+        this.recordLearning(prompt, adapted, similar);
+        return adapted;
+      }
     }
 
     // Use neural network prediction
@@ -143,10 +164,13 @@ export class SelfLearningLLM {
     const prediction = this.ensureUniqueResponse(this.devectorize(output), prompt, contextWindow);
 
     if (prediction) {
+      this.learnFrom(prompt, prediction);
       return prediction;
     }
 
-    return this.buildFallbackResponse(prompt, contextWindow);
+    const fallback = this.buildFallbackResponse(prompt, contextWindow);
+    this.learnFrom(prompt, fallback);
+    return fallback;
   }
 
   private devectorize(vector: number[]): string {
@@ -182,19 +206,81 @@ export class SelfLearningLLM {
   private ensureUniqueResponse(
     response: string,
     prompt: string,
-    history: ChatMessage[]
+    history: ChatMessage[],
+    referencePrompt?: string
   ): string {
     const trimmed = response?.trim();
     if (!trimmed) {
       return '';
     }
 
-    const lastAssistant = this.getLastAssistantMessage(history)?.content?.trim();
-    if (lastAssistant && lastAssistant.localeCompare(trimmed, undefined, { sensitivity: 'accent' }) === 0) {
+    const personalised = this.personalizeResponse(trimmed, prompt, referencePrompt);
+
+    if (this.isDuplicate(personalised, history)) {
       return this.buildFallbackResponse(prompt, history);
     }
 
-    return trimmed;
+    return personalised;
+  }
+
+  private personalizeResponse(base: string, prompt: string, referencePrompt?: string): string {
+    const cleaned = prompt.trim();
+    if (!cleaned) {
+      return base;
+    }
+
+    const excerpt = cleaned.length > 160 ? `${cleaned.slice(0, 157)}…` : cleaned;
+    const keywords = this.extractKeywords(cleaned, 4);
+    const referenceKeywords = referencePrompt ? new Set(this.extractKeywords(referencePrompt, 6)) : undefined;
+    const novelKeywords = referenceKeywords
+      ? keywords.filter((keyword) => !referenceKeywords.has(keyword))
+      : keywords;
+
+    const formattedKeywords = novelKeywords
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(', ');
+
+    const details: string[] = [];
+
+    details.push(`I'm grounding this reply in "${excerpt}".`);
+
+    if (formattedKeywords.length > 0) {
+      details.push(`Key focus points: ${formattedKeywords}.`);
+    }
+
+    if (referencePrompt && novelKeywords.length === 0 && keywords.length > 0) {
+      details.push("I'm refining earlier insights to match your current wording.");
+    }
+
+    const personalization = details.join(' ');
+
+    if (!personalization) {
+      return base;
+    }
+
+    if (base.includes(personalization)) {
+      return base;
+    }
+
+    return `${base}\n\n${personalization}`.trim();
+  }
+
+  private isDuplicate(candidate: string, history: ChatMessage[]): boolean {
+    const lastAssistant = this.getLastAssistantMessage(history)?.content?.trim();
+    return Boolean(
+      lastAssistant &&
+      lastAssistant.localeCompare(candidate.trim(), undefined, { sensitivity: 'accent' }) === 0
+    );
+  }
+
+  private recordLearning(prompt: string, response: string, reference: TrainingEntry): void {
+    if (reference.prompt.trim() === prompt.trim()) {
+      this.learnFrom(prompt, response);
+      return;
+    }
+
+    const blendedResponse = `${response}\n\n(Adapted from earlier context on: "${reference.prompt}")`;
+    this.learnFrom(prompt, blendedResponse);
   }
 
   private getLastAssistantMessage(history: ChatMessage[]): ChatMessage | undefined {
