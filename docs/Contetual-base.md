@@ -300,7 +300,9 @@ class Tagger {
 
 ```js
 class SelfLearningLLM {
-  constructor(inputSize, hiddenSize, outputSize) { ... }
+  constructor(inputSize, hiddenSize, outputSize, options = {}) { ... }
+  setTagSimilarityThreshold(value) { ... }
+  getTagSimilarityThreshold() { ... }
   predict(input) { ... }
   train(input, target, learningRate = 0.1) { ... }
   learnFrom(prompt, response) { ... }
@@ -314,8 +316,9 @@ class SelfLearningLLM {
 ## 🧪 Example Usage
 
 ```js
-const llm = new SelfLearningLLM(32, 16, 32);
+const llm = new SelfLearningLLM(32, 16, 32, { tagSimilarityThreshold: 0.4 });
 llm.learnFrom("hello", "hi there");
+llm.setTagSimilarityThreshold(0.25); // allow broader tag matching for replays
 console.log(llm.predict(llm.vectorize("hello")));
 console.log(llm.tag("How are you?")); // → ["how", "are you", "question"]
 ```
