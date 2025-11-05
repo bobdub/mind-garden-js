@@ -26,6 +26,7 @@ export class SelfLearningLLM {
   private tagSimilarityThreshold: number;
 
   static readonly DEFAULT_TAG_SIMILARITY_THRESHOLD = 0.5;
+  static readonly MIN_MEMORIES_FOR_LEARNING = 3;
 
   constructor(
     inputSize: number = 32,
@@ -170,6 +171,7 @@ export class SelfLearningLLM {
     // Check memory for similar prompts
     const memories = this.getMemories();
     const similar = memories.find((m) => this.tagger.similarity(tags, m.tags) > this.tagSimilarityThreshold);
+    const hasSufficientMemories = memories.length >= SelfLearningLLM.MIN_MEMORIES_FOR_LEARNING;
 
     if (similar) {
       const adapted = this.ensureUniqueResponse(similar.response, prompt, contextWindow, similar.prompt);
@@ -181,15 +183,24 @@ export class SelfLearningLLM {
 
     // Use neural network prediction
     const output = this.predict(inputVector);
-    const prediction = this.ensureUniqueResponse(this.devectorize(output), prompt, contextWindow);
+    const rawPrediction = this.devectorize(output);
+    const isMeaningful = this.isMeaningfulText(rawPrediction);
 
-    if (prediction) {
-      this.learnFrom(prompt, prediction, contextWindow);
-      return prediction;
+    if (hasSufficientMemories && isMeaningful) {
+      const prediction = this.ensureUniqueResponse(rawPrediction, prompt, contextWindow);
+
+      if (prediction) {
+        this.learnFrom(prompt, prediction, contextWindow);
+        return prediction;
+      }
     }
 
     const fallback = this.buildFallbackResponse(prompt, contextWindow);
-    this.learnFrom(prompt, fallback, contextWindow);
+
+    if (hasSufficientMemories && isMeaningful) {
+      this.learnFrom(prompt, fallback, contextWindow);
+    }
+
     return fallback;
   }
 
@@ -363,5 +374,30 @@ export class SelfLearningLLM {
       .split(/[^a-z0-9]+/)
       .filter((word) => word.length > 3)
       .slice(0, limit);
+  }
+
+  private isMeaningfulText(text: string): boolean {
+    const trimmed = text.trim();
+
+    if (trimmed.length < 12) {
+      return false;
+    }
+
+    const words = trimmed.split(/\s+/).filter(Boolean);
+
+    if (words.length < 3) {
+      return false;
+    }
+
+    const uniqueWords = new Set(words.map((word) => word.toLowerCase()));
+
+    if (uniqueWords.size < 3) {
+      return false;
+    }
+
+    const hasVowel = /[aeiou]/i.test(trimmed);
+    const hasPunctuation = /[.,!?;:]/.test(trimmed);
+
+    return hasVowel && hasPunctuation;
   }
 }
