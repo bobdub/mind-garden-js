@@ -11,10 +11,6 @@ export interface TrainingEntry {
   timestamp: number;
 }
 
-export interface SelfLearningLLMOptions {
-  tagSimilarityThreshold?: number;
-}
-
 export class SelfLearningLLM {
   private inputLayer: Layer;
   private hiddenLayer: Layer;
@@ -23,16 +19,8 @@ export class SelfLearningLLM {
   private tagger: Tagger;
   private vectorSize: number;
   private vocabulary: Map<string, number>;
-  private tagSimilarityThreshold: number;
 
-  static readonly DEFAULT_TAG_SIMILARITY_THRESHOLD = 0.5;
-
-  constructor(
-    inputSize: number = 32,
-    hiddenSize: number = 16,
-    outputSize: number = 32,
-    options: SelfLearningLLMOptions = {}
-  ) {
+  constructor(inputSize: number = 32, hiddenSize: number = 16, outputSize: number = 32) {
     this.vectorSize = inputSize;
     this.inputLayer = new Layer(hiddenSize, inputSize);
     this.hiddenLayer = new Layer(hiddenSize, hiddenSize);
@@ -40,22 +28,8 @@ export class SelfLearningLLM {
     this.memory = new LocalMemory('SelfLearningLLM');
     this.tagger = new Tagger();
     this.vocabulary = new Map();
-    this.tagSimilarityThreshold = options.tagSimilarityThreshold ?? SelfLearningLLM.DEFAULT_TAG_SIMILARITY_THRESHOLD;
-
+    
     this.loadVocabulary();
-  }
-
-  getTagSimilarityThreshold(): number {
-    return this.tagSimilarityThreshold;
-  }
-
-  setTagSimilarityThreshold(value: number): void {
-    if (Number.isNaN(value)) {
-      return;
-    }
-
-    const clamped = Math.min(Math.max(value, 0), 1);
-    this.tagSimilarityThreshold = clamped;
   }
 
   private loadVocabulary(): void {
@@ -169,7 +143,7 @@ export class SelfLearningLLM {
 
     // Check memory for similar prompts
     const memories = this.getMemories();
-    const similar = memories.find((m) => this.tagger.similarity(tags, m.tags) > this.tagSimilarityThreshold);
+    const similar = memories.find((m) => this.tagger.similarity(tags, m.tags) > 0.5);
 
     if (similar) {
       const adapted = this.ensureUniqueResponse(similar.response, prompt, contextWindow, similar.prompt);

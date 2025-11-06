@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -6,7 +6,6 @@ import { BookOpen, Zap } from 'lucide-react';
 import { SelfLearningLLM } from '@/lib/neural/SelfLearningLLM';
 import { AnalyticsTracker } from '@/lib/analytics/AnalyticsTracker';
 import { toast } from 'sonner';
-import { Slider } from '@/components/ui/slider';
 
 interface TrainingPanelProps {
   llm: SelfLearningLLM;
@@ -17,13 +16,6 @@ export const TrainingPanel = ({ llm, onTrained }: TrainingPanelProps) => {
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
   const [isTraining, setIsTraining] = useState(false);
-  const [threshold, setThreshold] = useState(() => llm.getTagSimilarityThreshold());
-
-  const handleThresholdChange = useCallback((value: number[]) => {
-    const next = value[0] ?? SelfLearningLLM.DEFAULT_TAG_SIMILARITY_THRESHOLD;
-    setThreshold(next);
-    llm.setTagSimilarityThreshold(next);
-  }, [llm]);
 
   const handleTrain = async () => {
     const trimmedPrompt = prompt.trim();
@@ -85,24 +77,6 @@ export const TrainingPanel = ({ llm, onTrained }: TrainingPanelProps) => {
 
         <div>
           <label className="text-sm text-muted-foreground mb-2 block">
-            Tag similarity threshold: <span className="font-medium text-foreground">{threshold.toFixed(2)}</span>
-          </label>
-          <Slider
-            value={[threshold]}
-            onValueChange={handleThresholdChange}
-            min={0}
-            max={1}
-            step={0.05}
-            className="pt-2"
-            aria-label="Tag similarity threshold"
-          />
-          <p className="mt-2 text-xs text-muted-foreground">
-            Lower values let the model reuse responses from loosely related prompts, while higher values restrict replay to very close matches.
-          </p>
-        </div>
-
-        <div>
-          <label className="text-sm text-muted-foreground mb-2 block">
             Respond with:
           </label>
           <Input
@@ -134,8 +108,8 @@ export const TrainingPanel = ({ llm, onTrained }: TrainingPanelProps) => {
 
       <div className="mt-6 p-4 glass-card rounded-lg">
         <p className="text-xs text-muted-foreground">
-          <strong>Tip:</strong> Threshold tuning adjusts how closely new prompts must match saved tags before a learned response is reused.
-          Lower the slider to encourage broader retrieval; raise it to fall back to fresh replies when prompts differ.
+          <strong>Tip:</strong> The model learns patterns from your training examples. 
+          Similar prompts will trigger similar responses based on semantic similarity.
         </p>
       </div>
     </Card>
