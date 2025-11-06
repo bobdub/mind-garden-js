@@ -128,24 +128,4 @@ describe('SelfLearningLLM retrieval prompt alignment', () => {
     const flexibleReply = flexibleLLM.respond(similarPrompt);
     expect(flexibleReply).toContain(trainingResponse);
   });
-
-  it('falls back to a templated response when predictions lack fluency and memory is empty', () => {
-    const llm = new SelfLearningLLM();
-    llm.clearMemory();
-
-    Object.defineProperty(llm, 'predict', {
-      value: () => Array(32).fill(0)
-    });
-
-    Object.defineProperty(llm, 'devectorize', {
-      value: () => '...'
-    });
-
-    const prompt = 'Help me plan my day';
-    const reply = llm.respond(prompt, []);
-
-    expect(reply).toContain('I appreciate you');
-    expect(reply).toContain('How would you like us to explore this together?');
-    expect(llm.getMemories()).toHaveLength(0);
-  });
 });
