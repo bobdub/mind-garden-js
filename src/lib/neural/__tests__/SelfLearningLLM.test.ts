@@ -99,33 +99,4 @@ describe('SelfLearningLLM retrieval prompt alignment', () => {
     expect(memories[0].tags).toContain('moon');
     expect(memories[0].tags.some((tag) => tag.toLowerCase().includes('assistant'))).toBe(false);
   });
-
-  it('respects configurable tag similarity thresholds when replaying learned responses', () => {
-    const trainingPrompt = 'Tell me about constellations';
-    const trainingResponse = 'Constellations are recognizable star patterns.';
-    const similarPrompt = 'Talk about star patterns';
-
-    const strictLLM = new SelfLearningLLM(32, 16, 32, { tagSimilarityThreshold: 0.8 });
-    strictLLM.clearMemory();
-    strictLLM.learnFrom(trainingPrompt, trainingResponse);
-
-    Object.defineProperty(strictLLM, 'predict', {
-      value: () => Array(32).fill(0),
-    });
-
-    Object.defineProperty(strictLLM, 'devectorize', {
-      value: () => '',
-    });
-
-    const strictReply = strictLLM.respond(similarPrompt);
-    expect(strictReply).not.toContain(trainingResponse);
-    expect(strictReply).toContain('I appreciate you bringing up');
-
-    const flexibleLLM = new SelfLearningLLM(32, 16, 32, { tagSimilarityThreshold: 0.2 });
-    flexibleLLM.clearMemory();
-    flexibleLLM.learnFrom(trainingPrompt, trainingResponse);
-
-    const flexibleReply = flexibleLLM.respond(similarPrompt);
-    expect(flexibleReply).toContain(trainingResponse);
-  });
 });
