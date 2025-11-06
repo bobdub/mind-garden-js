@@ -174,9 +174,7 @@ export class SelfLearningLLM {
     const hasSufficientMemories = memories.length >= SelfLearningLLM.MIN_MEMORIES_FOR_LEARNING;
 
     if (similar) {
-      const adapted = this.ensureUniqueResponse(similar.response, prompt, contextWindow, similar.prompt, {
-        preserveOriginal: true
-      });
+      const adapted = this.ensureUniqueResponse(similar.response, prompt, contextWindow, similar.prompt);
       if (adapted) {
         this.recordLearning(prompt, adapted, similar, contextWindow);
         return adapted;
@@ -240,18 +238,14 @@ export class SelfLearningLLM {
     response: string,
     prompt: string,
     history: ChatMessage[],
-    referencePrompt?: string,
-    options: { preserveOriginal?: boolean } = {}
+    referencePrompt?: string
   ): string {
     const trimmed = response?.trim();
     if (!trimmed) {
       return '';
     }
 
-    const shouldPersonalize = !(options.preserveOriginal ?? Boolean(referencePrompt));
-    const personalised = shouldPersonalize
-      ? this.personalizeResponse(trimmed, prompt, referencePrompt)
-      : trimmed;
+    const personalised = this.personalizeResponse(trimmed, prompt, referencePrompt);
 
     if (this.isDuplicate(personalised, history)) {
       return this.buildFallbackResponse(prompt, history);
