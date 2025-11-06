@@ -86,17 +86,17 @@ export class SelfLearningLLM {
     this.inputLayer.train(input, hidden1Errors, learningRate);
   }
 
-  learnFrom(prompt: string, response: string, history: ChatMessage[] = []): void {
-    const retrievalPrompt = this.buildRetrievalPrompt(prompt, history);
+  learnFrom(prompt: string, response: string): void {
+    const trimmedPrompt = prompt.trim();
     const trimmedResponse = response.trim();
 
-    if (!retrievalPrompt || !trimmedResponse) {
+    if (!trimmedPrompt || !trimmedResponse) {
       return;
     }
 
-    const inputVector = this.vectorize(retrievalPrompt);
+    const inputVector = this.vectorize(trimmedPrompt);
     const targetVector = this.vectorize(trimmedResponse);
-    const tags = this.tag(retrievalPrompt);
+    const tags = this.tag(trimmedPrompt);
 
     // Train the network
     for (let i = 0; i < 10; i++) {
@@ -105,7 +105,7 @@ export class SelfLearningLLM {
 
     // Store in memory
     const entry: TrainingEntry = {
-      prompt: retrievalPrompt,
+      prompt: trimmedPrompt,
       response: trimmedResponse,
       tags,
       timestamp: Date.now()
@@ -113,7 +113,7 @@ export class SelfLearningLLM {
 
     const memories = this.getMemories();
     const existingIndex = memories.findIndex((memory) =>
-      memory.prompt.localeCompare(retrievalPrompt, undefined, { sensitivity: 'accent' }) === 0 &&
+      memory.prompt.localeCompare(trimmedPrompt, undefined, { sensitivity: 'accent' }) === 0 &&
       memory.response.localeCompare(trimmedResponse, undefined, { sensitivity: 'accent' }) === 0
     );
 
@@ -129,7 +129,13 @@ export class SelfLearningLLM {
   respond(prompt: string, history: ChatMessage[] = [], windowSize: number = 6): string {
     const contextWindow = windowSize > 0 ? history.slice(-windowSize) : [];
     const assembledPrompt = assemblePrompt({ prompt, history: contextWindow });
-    const retrievalPrompt = this.buildRetrievalPrompt(prompt, contextWindow);
+    const contextText = contextWindow
+      .map((entry) => `${entry.role === 'user' ? 'User' : 'Assistant'}: ${entry.content}`)
+      .join(' ')
+      .trim();
+    const contextualPrompt = contextText
+      ? `${contextText} User: ${prompt}`
+      : prompt;
 
     if (typeof console !== 'undefined' && typeof console.debug === 'function') {
       console.debug('[SelfLearningLLM] Using system prompt', {
@@ -139,7 +145,7 @@ export class SelfLearningLLM {
     }
 
     const inputVector = this.vectorize(assembledPrompt);
-    const tags = this.tag(retrievalPrompt);
+    const tags = this.tag(contextualPrompt);
 
     // Check memory for similar prompts
     const memories = this.getMemories();
@@ -148,7 +154,7 @@ export class SelfLearningLLM {
     if (similar) {
       const adapted = this.ensureUniqueResponse(similar.response, prompt, contextWindow, similar.prompt);
       if (adapted) {
-        this.recordLearning(prompt, adapted, similar, contextWindow);
+        this.recordLearning(prompt, adapted, similar);
         return adapted;
       }
     }
@@ -158,12 +164,12 @@ export class SelfLearningLLM {
     const prediction = this.ensureUniqueResponse(this.devectorize(output), prompt, contextWindow);
 
     if (prediction) {
-      this.learnFrom(prompt, prediction, contextWindow);
+      this.learnFrom(prompt, prediction);
       return prediction;
     }
 
     const fallback = this.buildFallbackResponse(prompt, contextWindow);
-    this.learnFrom(prompt, fallback, contextWindow);
+    this.learnFrom(prompt, fallback);
     return fallback;
   }
 
@@ -267,35 +273,14 @@ export class SelfLearningLLM {
     );
   }
 
-  private recordLearning(
-    prompt: string,
-    response: string,
-    reference: TrainingEntry,
-    history: ChatMessage[]
-  ): void {
-    const retrievalPrompt = this.buildRetrievalPrompt(prompt, history);
-
-    if (reference.prompt.trim() === retrievalPrompt.trim()) {
-      this.learnFrom(prompt, response, history);
+  private recordLearning(prompt: string, response: string, reference: TrainingEntry): void {
+    if (reference.prompt.trim() === prompt.trim()) {
+      this.learnFrom(prompt, response);
       return;
     }
 
     const blendedResponse = `${response}\n\n(Adapted from earlier context on: "${reference.prompt}")`;
-    this.learnFrom(prompt, blendedResponse, history);
-  }
-
-  private buildRetrievalPrompt(prompt: string, history: ChatMessage[] = []): string {
-    const trimmedPrompt = prompt.trim();
-
-    if (trimmedPrompt) {
-      return trimmedPrompt;
-    }
-
-    const lastUserMessage = [...history]
-      .reverse()
-      .find((entry) => entry.role === 'user' && entry.content?.trim().length);
-
-    return lastUserMessage?.content.trim() ?? '';
+    this.learnFrom(prompt, blendedResponse);
   }
 
   private getLastAssistantMessage(history: ChatMessage[]): ChatMessage | undefined {
