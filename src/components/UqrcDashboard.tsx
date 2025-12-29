@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import {
-  computeLoss,
+  computeUqrcLearningLoss,
   createBrowserMemoryStore,
+  defaultLossWeights,
   decodeOutput,
   encodeInput,
   initializeInteractionState,
@@ -43,8 +44,19 @@ export const UqrcDashboard = () => {
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState(0.5);
   const [trainingTarget, setTrainingTarget] = useState("");
+  const [trainingParaphrase, setTrainingParaphrase] = useState("");
+  const [trainingEvidence, setTrainingEvidence] = useState("");
   const [lastOutput, setLastOutput] = useState<string | null>(null);
   const [lastLoss, setLastLoss] = useState<number | null>(null);
+  const [lossBreakdown, setLossBreakdown] = useState<{
+    task: number;
+    entropy: number;
+    fluency: number;
+    memory: number;
+    redundancy: number;
+    verifiability: number;
+    creativity: number;
+  } | null>(null);
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState<ConsoleEntry[]>([]);
 
@@ -69,9 +81,44 @@ export const UqrcDashboard = () => {
     }
 
     const targetVector = encodeInput(trainingTarget, state.u.length);
-    const loss = computeLoss(state.u, targetVector, 0.08);
-    setParams((current) => updateParameters(current, loss, 0.05));
-    setLastLoss(loss);
+    const paraphraseVector = trainingParaphrase.trim()
+      ? encodeInput(trainingParaphrase, state.u.length)
+      : undefined;
+    const evidenceVector = trainingEvidence.trim()
+      ? encodeInput(trainingEvidence, state.u.length)
+      : undefined;
+    const memoryEntriesForTraining = memory.list();
+    const previousState =
+      memoryEntriesForTraining.length > 1
+        ? memoryEntriesForTraining[memoryEntriesForTraining.length - 2]?.u
+        : undefined;
+    const creativitySamples = memoryEntriesForTraining
+      .slice(-3)
+      .map((entry) => entry.u);
+
+    const result = computeUqrcLearningLoss(
+      {
+        prediction: state.u,
+        target: targetVector,
+        previous: previousState,
+        paraphrase: paraphraseVector,
+        evidence: evidenceVector,
+        creativitySamples,
+      },
+      { ...defaultLossWeights, entropy: 0.08 }
+    );
+
+    setParams((current) => updateParameters(current, result.total, 0.05));
+    setLastLoss(result.total);
+    setLossBreakdown({
+      task: result.task,
+      entropy: result.entropy,
+      fluency: result.fluency,
+      memory: result.memory,
+      redundancy: result.redundancy,
+      verifiability: result.verifiability,
+      creativity: result.creativity,
+    });
   };
 
   const handleChatSend = () => {
@@ -235,13 +282,36 @@ export const UqrcDashboard = () => {
             onChange={(event) => setTrainingTarget(event.target.value)}
             placeholder="Target phrase for training"
           />
+          <Input
+            value={trainingParaphrase}
+            onChange={(event) => setTrainingParaphrase(event.target.value)}
+            placeholder="Optional paraphrase (redundancy anchor)"
+          />
+          <Input
+            value={trainingEvidence}
+            onChange={(event) => setTrainingEvidence(event.target.value)}
+            placeholder="Optional evidence phrase (verifiability anchor)"
+          />
           <Button variant="secondary" onClick={handleTrain}>
             Apply Training Update
           </Button>
           {lastLoss !== null && (
-            <p className="text-sm text-muted-foreground">
-              Latest loss: {lastLoss.toFixed(4)}
-            </p>
+            <div className="rounded-md border border-border/60 bg-background/50 p-3 text-sm space-y-1">
+              <p className="text-muted-foreground">
+                Latest loss: {lastLoss.toFixed(4)}
+              </p>
+              {lossBreakdown && (
+                <ul className="text-xs text-muted-foreground grid gap-1">
+                  <li>Task: {formatValue(lossBreakdown.task)}</li>
+                  <li>Entropy: {formatValue(lossBreakdown.entropy)}</li>
+                  <li>Fluency: {formatValue(lossBreakdown.fluency)}</li>
+                  <li>Memory: {formatValue(lossBreakdown.memory)}</li>
+                  <li>Redundancy: {formatValue(lossBreakdown.redundancy)}</li>
+                  <li>Verifiability: {formatValue(lossBreakdown.verifiability)}</li>
+                  <li>Creativity: {formatValue(lossBreakdown.creativity)}</li>
+                </ul>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
