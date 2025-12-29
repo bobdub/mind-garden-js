@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Send, Brain, User, Scissors, Trash2, ThumbsUp, ThumbsDown, AlertTriangle } from 'lucide-react';
 import { SelfLearningLLM } from '@/lib/neural/SelfLearningLLM';
@@ -291,18 +291,19 @@ export const ChatInterface = ({ llm }: ChatInterfaceProps) => {
 
       <div className="p-4 border-t border-border">
         <div className="flex gap-2">
-          <Input
+          <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
               }
             }}
             placeholder="Type your message..."
             disabled={isProcessing}
-            className="bg-input"
+            rows={1}
+            className="bg-input min-h-[44px] max-h-40 resize-none"
           />
           <Button
             onClick={handleSend}
