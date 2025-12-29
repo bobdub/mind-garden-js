@@ -25,18 +25,18 @@ export const useLearnerProfile = () => {
       return;
     }
 
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return;
-    }
-
     try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        return;
+      }
+
       const parsed = JSON.parse(raw) as LearnerProfile;
       if (parsed && typeof parsed === 'object') {
         setProfile({ ...DEFAULT_PROFILE, ...parsed });
       }
     } catch (error) {
-      console.warn('[learner-profile] failed to parse stored profile', error);
+      console.warn('[learner-profile] failed to read stored profile', error);
     }
   }, []);
 
@@ -45,7 +45,11 @@ export const useLearnerProfile = () => {
       return;
     }
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    } catch (error) {
+      console.warn('[learner-profile] failed to persist profile', error);
+    }
   }, [profile]);
 
   const updateProfile = useCallback((updates: Partial<LearnerProfile>) => {
