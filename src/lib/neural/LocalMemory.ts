@@ -1,3 +1,5 @@
+import { canUseLocalStorage, getLocalStorage } from '../storage/storageAvailability';
+
 export class LocalMemory<TValue = unknown> {
   private readonly namespace: string;
 
@@ -6,18 +8,7 @@ export class LocalMemory<TValue = unknown> {
   }
 
   private canUseStorage(): boolean {
-    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-      return false;
-    }
-    try {
-      const probeKey = `${this.namespace}_probe`;
-      window.localStorage.setItem(probeKey, '1');
-      window.localStorage.removeItem(probeKey);
-      return true;
-    } catch (error) {
-      console.warn("LocalStorage is not available:", error);
-      return false;
-    }
+    return canUseLocalStorage();
   }
 
   remember(key: string, value: TValue): void {
@@ -25,7 +16,11 @@ export class LocalMemory<TValue = unknown> {
       if (!this.canUseStorage()) {
         return;
       }
-      localStorage.setItem(`${this.namespace}_${key}`, JSON.stringify(value));
+      const storage = getLocalStorage();
+      if (!storage) {
+        return;
+      }
+      storage.setItem(`${this.namespace}_${key}`, JSON.stringify(value));
     } catch (error) {
       console.error("Failed to save to localStorage:", error);
     }
@@ -36,7 +31,11 @@ export class LocalMemory<TValue = unknown> {
       if (!this.canUseStorage()) {
         return null;
       }
-      const item = localStorage.getItem(`${this.namespace}_${key}`);
+      const storage = getLocalStorage();
+      if (!storage) {
+        return null;
+      }
+      const item = storage.getItem(`${this.namespace}_${key}`);
       return item ? (JSON.parse(item) as TValue) : null;
     } catch (error) {
       console.error("Failed to recall from localStorage:", error);
@@ -49,7 +48,11 @@ export class LocalMemory<TValue = unknown> {
       if (!this.canUseStorage()) {
         return;
       }
-      localStorage.removeItem(`${this.namespace}_${key}`);
+      const storage = getLocalStorage();
+      if (!storage) {
+        return;
+      }
+      storage.removeItem(`${this.namespace}_${key}`);
     } catch (error) {
       console.error("Failed to remove localStorage item:", error);
     }
@@ -61,8 +64,12 @@ export class LocalMemory<TValue = unknown> {
       if (!this.canUseStorage()) {
         return keys;
       }
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
+      const storage = getLocalStorage();
+      if (!storage) {
+        return keys;
+      }
+      for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i);
         if (key && key.startsWith(this.namespace)) {
           keys.push(key.replace(`${this.namespace}_`, ""));
         }
