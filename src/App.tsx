@@ -13,7 +13,8 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const rawBase = import.meta.env.BASE_URL ?? "/";
-  const basename = rawBase === "/" ? "/" : rawBase.replace(/\/+$/, "");
+  const normalizedBase = rawBase === "./" ? "/" : rawBase;
+  const basename = normalizedBase === "/" ? "/" : normalizedBase.replace(/\/+$/, "");
 
   useEffect(() => {
     AnalyticsTracker.trackSessionStart();
