@@ -1,4 +1,5 @@
 import { Vector } from "./operators";
+import { canUseLocalStorage, getLocalStorage } from "../lib/storage/storageAvailability";
 
 export interface MemoryEntry {
   input: string;
@@ -56,6 +57,10 @@ export const createBrowserMemoryStore = (key = "uqrc-memory"): MemoryStore => {
   if (typeof window === "undefined") {
     return new MemoryStore();
   }
+  const storage = getLocalStorage();
+  if (!storage) {
+    return new MemoryStore();
+  }
 
   const isFiniteNumber = (value: unknown): value is number =>
     typeof value === "number" && Number.isFinite(value);
@@ -86,7 +91,10 @@ export const createBrowserMemoryStore = (key = "uqrc-memory"): MemoryStore => {
   let entries: MemoryEntry[] = [];
   let canPersist = false;
   try {
-    const raw = window.localStorage?.getItem(key);
+    if (!canUseLocalStorage()) {
+      return new MemoryStore();
+    }
+    const raw = storage.getItem(key);
     canPersist = true;
     if (raw) {
       const parsed = JSON.parse(raw);
@@ -94,11 +102,12 @@ export const createBrowserMemoryStore = (key = "uqrc-memory"): MemoryStore => {
         entries = parsed.map(normalizeEntry).filter(Boolean) as MemoryEntry[];
       } else {
         console.warn("[uqrc] persisted memory was invalid, clearing", parsed);
-        window.localStorage?.removeItem(key);
+        storage.removeItem(key);
       }
     }
   } catch (error) {
     console.warn("[uqrc] failed to read persisted memory", error);
+    canPersist = false;
   }
   const store = new MemoryStore(entries);
 
@@ -108,9 +117,13 @@ export const createBrowserMemoryStore = (key = "uqrc-memory"): MemoryStore => {
 
   const persist = () => {
     try {
-      window.localStorage?.setItem(key, JSON.stringify(store.toJSON()));
+      if (!canPersist) {
+        return;
+      }
+      storage.setItem(key, JSON.stringify(store.toJSON()));
     } catch (error) {
       console.warn("[uqrc] failed to persist memory", error);
+      canPersist = false;
     }
   };
 
