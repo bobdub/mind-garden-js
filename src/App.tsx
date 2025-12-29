@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import { ChatProvider } from "@/context/ChatContext";
+import { ChatProvider } from "@/context/ChatProvider";
 import { AnalyticsTracker } from "@/lib/analytics/AnalyticsTracker";
 
 const queryClient = new QueryClient();
