@@ -1,13 +1,11 @@
 import { useMemo, useState } from "react";
 import {
-  computeUqrcLearningLoss,
   createBrowserMemoryStore,
-  defaultLossWeights,
+  createBrowserTrainingHookStore,
   decodeOutput,
-  encodeInput,
   initializeInteractionState,
   runInteractionStep,
-  updateParameters,
+  TrainingHook,
 } from "@/uqrc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +22,10 @@ interface ConsoleEntry {
 
 export const UqrcDashboard = () => {
   const memory = useMemo(() => createBrowserMemoryStore("uqrc-memory"), []);
+  const trainingHookStore = useMemo(
+    () => createBrowserTrainingHookStore("uqrc-training-hooks"),
+    []
+  );
   const [state, setState] = useState(() => {
     const stored = memory.latestState();
     const initial = initializeInteractionState({
@@ -35,7 +37,7 @@ export const UqrcDashboard = () => {
     }
     return initial;
   });
-  const [params, setParams] = useState({
+  const [params] = useState({
     nu: 0.2,
     beta: 0.05,
     lMin: 1,
@@ -43,20 +45,13 @@ export const UqrcDashboard = () => {
   });
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState(0.5);
-  const [trainingTarget, setTrainingTarget] = useState("");
-  const [trainingParaphrase, setTrainingParaphrase] = useState("");
-  const [trainingEvidence, setTrainingEvidence] = useState("");
+  const [trainingMessage, setTrainingMessage] = useState("");
+  const [trainingReply, setTrainingReply] = useState("");
+  const [trainingIncurSentence, setTrainingIncurSentence] = useState("");
+  const [trainingHooks, setTrainingHooks] = useState<TrainingHook[]>(
+    trainingHookStore.list()
+  );
   const [lastOutput, setLastOutput] = useState<string | null>(null);
-  const [lastLoss, setLastLoss] = useState<number | null>(null);
-  const [lossBreakdown, setLossBreakdown] = useState<{
-    task: number;
-    entropy: number;
-    fluency: number;
-    memory: number;
-    redundancy: number;
-    verifiability: number;
-    creativity: number;
-  } | null>(null);
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState<ConsoleEntry[]>([]);
 
@@ -69,6 +64,7 @@ export const UqrcDashboard = () => {
       memory,
       params,
       feedback,
+      trainingHooks,
     });
     setState(result.state);
     setLastOutput(result.output);
@@ -76,49 +72,21 @@ export const UqrcDashboard = () => {
   };
 
   const handleTrain = () => {
-    if (!trainingTarget.trim()) {
+    if (!trainingMessage.trim() || !trainingReply.trim()) {
       return;
     }
 
-    const targetVector = encodeInput(trainingTarget, state.u.length);
-    const paraphraseVector = trainingParaphrase.trim()
-      ? encodeInput(trainingParaphrase, state.u.length)
-      : undefined;
-    const evidenceVector = trainingEvidence.trim()
-      ? encodeInput(trainingEvidence, state.u.length)
-      : undefined;
-    const memoryEntriesForTraining = memory.list();
-    const previousState =
-      memoryEntriesForTraining.length > 1
-        ? memoryEntriesForTraining[memoryEntriesForTraining.length - 2]?.u
-        : undefined;
-    const creativitySamples = memoryEntriesForTraining
-      .slice(-3)
-      .map((entry) => entry.u);
-
-    const result = computeUqrcLearningLoss(
-      {
-        prediction: state.u,
-        target: targetVector,
-        previous: previousState,
-        paraphrase: paraphraseVector,
-        evidence: evidenceVector,
-        creativitySamples,
-      },
-      { ...defaultLossWeights, entropy: 0.08 }
-    );
-
-    setParams((current) => updateParameters(current, result.total, 0.05));
-    setLastLoss(result.total);
-    setLossBreakdown({
-      task: result.task,
-      entropy: result.entropy,
-      fluency: result.fluency,
-      memory: result.memory,
-      redundancy: result.redundancy,
-      verifiability: result.verifiability,
-      creativity: result.creativity,
-    });
+    const hook: TrainingHook = {
+      message: trainingMessage.trim(),
+      reply: trainingReply.trim(),
+      incurSentence: trainingIncurSentence.trim(),
+      createdAt: Date.now(),
+    };
+    trainingHookStore.addHook(hook);
+    setTrainingHooks(trainingHookStore.list());
+    setTrainingMessage("");
+    setTrainingReply("");
+    setTrainingIncurSentence("");
   };
 
   const handleChatSend = () => {
@@ -130,6 +98,7 @@ export const UqrcDashboard = () => {
       memory,
       params,
       feedback,
+      trainingHooks,
     });
     setState(result.state);
     setChatHistory((prev) => [
@@ -158,6 +127,12 @@ export const UqrcDashboard = () => {
           <Textarea
             value={chatInput}
             onChange={(event) => setChatInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                handleChatSend();
+              }
+            }}
             placeholder="Chat with the UQRC loop..."
             rows={4}
           />
@@ -190,10 +165,20 @@ export const UqrcDashboard = () => {
           <CardTitle className="text-primary">UQRC Core Loop</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Send a single input through the UQRC update step and observe the
+            immediate response from the loop.
+          </p>
           <div className="grid gap-3 md:grid-cols-2">
             <Input
               value={input}
               onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleRun();
+                }
+              }}
               placeholder="Input to encode into the loop"
             />
             <Input
@@ -218,101 +203,28 @@ export const UqrcDashboard = () => {
 
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="text-primary">Operator Parameters</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2">
-          <Input
-            type="number"
-            step={0.05}
-            value={params.nu}
-            onChange={(event) =>
-              setParams((current) => ({
-                ...current,
-                nu: Number(event.target.value),
-              }))
-            }
-            placeholder="Diffusion ν"
-          />
-          <Input
-            type="number"
-            step={0.05}
-            value={params.beta}
-            onChange={(event) =>
-              setParams((current) => ({
-                ...current,
-                beta: Number(event.target.value),
-              }))
-            }
-            placeholder="Coercive β"
-          />
-          <Input
-            type="number"
-            step={0.1}
-            value={params.curvatureStrength}
-            onChange={(event) =>
-              setParams((current) => ({
-                ...current,
-                curvatureStrength: Number(event.target.value),
-              }))
-            }
-            placeholder="Curvature strength"
-          />
-          <Input
-            type="number"
-            step={0.5}
-            value={params.lMin}
-            onChange={(event) =>
-              setParams((current) => ({
-                ...current,
-                lMin: Number(event.target.value),
-              }))
-            }
-            placeholder="Discrete step ℓmin"
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="glass-card">
-        <CardHeader>
           <CardTitle className="text-primary">Training Hooks</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <Input
-            value={trainingTarget}
-            onChange={(event) => setTrainingTarget(event.target.value)}
-            placeholder="Target phrase for training"
+            value={trainingMessage}
+            onChange={(event) => setTrainingMessage(event.target.value)}
+            placeholder="Message (exact match)"
+          />
+          <Textarea
+            value={trainingReply}
+            onChange={(event) => setTrainingReply(event.target.value)}
+            placeholder="Trained reply"
+            rows={3}
           />
           <Input
-            value={trainingParaphrase}
-            onChange={(event) => setTrainingParaphrase(event.target.value)}
-            placeholder="Optional paraphrase (redundancy anchor)"
-          />
-          <Input
-            value={trainingEvidence}
-            onChange={(event) => setTrainingEvidence(event.target.value)}
-            placeholder="Optional evidence phrase (verifiability anchor)"
+            value={trainingIncurSentence}
+            onChange={(event) => setTrainingIncurSentence(event.target.value)}
+            placeholder="Phrase incur sentence"
           />
           <Button variant="secondary" onClick={handleTrain}>
             Apply Training Update
           </Button>
-          {lastLoss !== null && (
-            <div className="rounded-md border border-border/60 bg-background/50 p-3 text-sm space-y-1">
-              <p className="text-muted-foreground">
-                Latest loss: {lastLoss.toFixed(4)}
-              </p>
-              {lossBreakdown && (
-                <ul className="text-xs text-muted-foreground grid gap-1">
-                  <li>Task: {formatValue(lossBreakdown.task)}</li>
-                  <li>Entropy: {formatValue(lossBreakdown.entropy)}</li>
-                  <li>Fluency: {formatValue(lossBreakdown.fluency)}</li>
-                  <li>Memory: {formatValue(lossBreakdown.memory)}</li>
-                  <li>Redundancy: {formatValue(lossBreakdown.redundancy)}</li>
-                  <li>Verifiability: {formatValue(lossBreakdown.verifiability)}</li>
-                  <li>Creativity: {formatValue(lossBreakdown.creativity)}</li>
-                </ul>
-              )}
-            </div>
-          )}
         </CardContent>
       </Card>
 
