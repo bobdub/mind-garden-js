@@ -57,12 +57,46 @@ export const createBrowserMemoryStore = (key = "uqrc-memory"): MemoryStore => {
     return new MemoryStore();
   }
 
+  const isFiniteNumber = (value: unknown): value is number =>
+    typeof value === "number" && Number.isFinite(value);
+  const isVector = (value: unknown): value is Vector =>
+    Array.isArray(value) && value.every(isFiniteNumber);
+  const normalizeEntry = (value: unknown): MemoryEntry | null => {
+    if (!value || typeof value !== "object") {
+      return null;
+    }
+    const entry = value as Partial<MemoryEntry>;
+    if (
+      typeof entry.input !== "string" ||
+      typeof entry.output !== "string" ||
+      !isVector(entry.u) ||
+      !isFiniteNumber(entry.timestamp)
+    ) {
+      return null;
+    }
+    return {
+      input: entry.input,
+      output: entry.output,
+      u: entry.u,
+      feedback: isFiniteNumber(entry.feedback) ? entry.feedback : undefined,
+      timestamp: entry.timestamp,
+    };
+  };
+
   let entries: MemoryEntry[] = [];
   let canPersist = false;
   try {
     const raw = window.localStorage?.getItem(key);
-    entries = raw ? JSON.parse(raw) : [];
     canPersist = true;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        entries = parsed.map(normalizeEntry).filter(Boolean) as MemoryEntry[];
+      } else {
+        console.warn("[uqrc] persisted memory was invalid, clearing", parsed);
+        window.localStorage?.removeItem(key);
+      }
+    }
   } catch (error) {
     console.warn("[uqrc] failed to read persisted memory", error);
   }
@@ -79,6 +113,10 @@ export const createBrowserMemoryStore = (key = "uqrc-memory"): MemoryStore => {
       console.warn("[uqrc] failed to persist memory", error);
     }
   };
+
+  if (entries.length > 0) {
+    persist();
+  }
 
   const originalAdd = store.addEntry.bind(store);
   store.addEntry = (entry: MemoryEntry) => {
