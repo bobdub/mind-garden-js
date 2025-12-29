@@ -57,12 +57,27 @@ export const createBrowserMemoryStore = (key = "uqrc-memory"): MemoryStore => {
     return new MemoryStore();
   }
 
-  const raw = window.localStorage.getItem(key);
-  const entries: MemoryEntry[] = raw ? JSON.parse(raw) : [];
+  let entries: MemoryEntry[] = [];
+  let canPersist = false;
+  try {
+    const raw = window.localStorage?.getItem(key);
+    entries = raw ? JSON.parse(raw) : [];
+    canPersist = true;
+  } catch (error) {
+    console.warn("[uqrc] failed to read persisted memory", error);
+  }
   const store = new MemoryStore(entries);
 
+  if (!canPersist) {
+    return store;
+  }
+
   const persist = () => {
-    window.localStorage.setItem(key, JSON.stringify(store.toJSON()));
+    try {
+      window.localStorage?.setItem(key, JSON.stringify(store.toJSON()));
+    } catch (error) {
+      console.warn("[uqrc] failed to persist memory", error);
+    }
   };
 
   const originalAdd = store.addEntry.bind(store);
