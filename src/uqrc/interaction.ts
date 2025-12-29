@@ -1,6 +1,7 @@
 import { MemoryStore } from "./memory";
 import { defaultParams, initializeState, UQRCParams, UQRCState, updateState } from "./loop";
 import { Vector } from "./operators";
+import { TrainingHook } from "./trainingHooks";
 
 export interface InteractionResult {
   output: string;
@@ -12,6 +13,7 @@ export interface InteractionOptions {
   memory?: MemoryStore;
   dimension?: number;
   feedback?: number;
+  trainingHooks?: TrainingHook[];
 }
 
 const normalizeVector = (vector: Vector): Vector => {
@@ -55,7 +57,31 @@ export const runInteractionStep = (
   const params = { ...defaultParams, ...options.params };
   const encoded = encodeInput(input, state.u.length);
   const nextState = updateState(state, params, encoded);
-  const output = decodeOutput(nextState.u, input);
+  const normalizedInput = input.trim();
+  const trainingHooks = options.trainingHooks ?? [];
+  const matchedHook = trainingHooks.find(
+    (hook) => hook.message.trim() === normalizedInput
+  );
+  const matchedIncurSentence = trainingHooks.find((hook) => {
+    const incurSentence = hook.incurSentence.trim();
+    if (!incurSentence) {
+      return false;
+    }
+    return normalizedInput.toLowerCase().includes(incurSentence.toLowerCase());
+  });
+
+  let output = decodeOutput(nextState.u, input);
+  if (matchedHook) {
+    output = matchedHook.reply;
+  } else if (matchedIncurSentence && options.memory) {
+    const memories = options.memory.list();
+    const matchedMemory = [...memories]
+      .reverse()
+      .find((entry) => entry.input.trim() === normalizedInput);
+    if (matchedMemory) {
+      output = matchedMemory.output;
+    }
+  }
 
   if (options.memory) {
     options.memory.addEntry({
