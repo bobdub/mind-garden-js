@@ -1,20 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Brain } from 'lucide-react';
-import { SelfLearningLLM } from '@/lib/neural/SelfLearningLLM';
-import { ChatInterface } from '@/components/ChatInterface';
-import { TrainingPanel } from '@/components/TrainingPanel';
-import { MemoryViewer } from '@/components/MemoryViewer';
-import { NeuralVisualizer } from '@/components/NeuralVisualizer';
-import { LearningGoalsPanel } from '@/components/LearningGoalsPanel';
+import { UqrcDashboard } from '@/components/UqrcDashboard';
+import { UqrcConsole } from '@/components/UqrcConsole';
 
 const Index = () => {
-  const [llm] = useState(() => new SelfLearningLLM());
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  const handleTrained = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -25,9 +14,9 @@ const Index = () => {
               <Brain className="w-6 h-6 text-background" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Self-Learning LLM</h1>
+              <h1 className="text-xl font-bold">UQRC Core Loop</h1>
               <p className="text-sm text-muted-foreground mono">
-                v0.1.1 | JavaScript Neural Network
+                v0.2.0 | Universal Quantum-Relative Calculus Runtime
               </p>
             </div>
           </div>
@@ -36,41 +25,33 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Chat Interface */}
-          <div className="lg:col-span-2">
-            <ChatInterface llm={llm} />
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-3">
+            <div className="glass-card p-6 rounded-lg space-y-3">
+              <h2 className="text-lg font-semibold text-primary">
+                Imagination Engine
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                The UQRC runtime encodes input into a latent state, applies
+                diffusion, curvature, coercive regulation, and discrete stepping
+                operators, and returns an emergent response. Memory is persisted
+                locally to capture learning with and from the user.
+              </p>
+            </div>
           </div>
-
-          {/* Right Column - Controls & Stats */}
-          <div className="space-y-6">
-            <TrainingPanel llm={llm} onTrained={handleTrained} />
-            <LearningGoalsPanel />
-            <MemoryViewer llm={llm} refreshTrigger={refreshTrigger} />
-            <NeuralVisualizer />
+          <div className="lg:col-span-2">
+            <div className="glass-card p-6 rounded-lg space-y-2 text-sm text-muted-foreground">
+              <p>
+                u(t+1) = u(t) + 𝒪<sub>UQRC</sub>(u(t)) + Σ 𝒟<sub>μ</sub>u(t)
+              </p>
+              <p>𝒪<sub>UQRC</sub>(u) := νΔu + ℛu + L<sub>S</sub>u</p>
+              <p>𝒟<sub>μ</sub>u(x) := (u(x + ℓ<sub>min</sub>e<sub>μ</sub>) - u(x)) / ℓ<sub>min</sub></p>
+            </div>
           </div>
         </div>
 
-        {/* Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <div className="glass-card p-6 rounded-lg">
-            <h3 className="font-semibold mb-2 text-primary">🧠 Neural Learning</h3>
-            <p className="text-sm text-muted-foreground">
-              Uses a 3-layer feedforward network with backpropagation to learn patterns from your training data.
-            </p>
-          </div>
-          <div className="glass-card p-6 rounded-lg">
-            <h3 className="font-semibold mb-2 text-success">💾 Persistent Memory</h3>
-            <p className="text-sm text-muted-foreground">
-              All training is saved to localStorage, so your model remembers across sessions.
-            </p>
-          </div>
-          <div className="glass-card p-6 rounded-lg">
-            <h3 className="font-semibold mb-2 text-warning">🏷️ Semantic Tagging</h3>
-            <p className="text-sm text-muted-foreground">
-              Automatically extracts tags and intent from text to improve response matching.
-            </p>
-          </div>
+        <div className="mt-8">
+          <UqrcDashboard />
         </div>
       </main>
 
