@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useReducer, ReactNode } from 'react';
+import { createContext, useContext } from 'react';
 import type { ChatMessage } from '@/types/chat';
 
 interface ChatState {
@@ -11,7 +11,7 @@ type ChatAction =
   | { type: 'CLEAR' }
   | { type: 'TRIM'; payload?: number };
 
-interface ChatContextValue {
+export interface ChatContextValue {
   messages: ChatMessage[];
   historyWindow: number;
   addMessage: (message: ChatMessage) => void;
@@ -81,36 +81,6 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
   }
 }
 
-interface ChatProviderProps {
-  children: ReactNode;
-}
-
-export const ChatProvider = ({ children }: ChatProviderProps) => {
-  const [state, dispatch] = useReducer(chatReducer, INITIAL_STATE);
-
-  const addMessage = useCallback((message: ChatMessage) => {
-    dispatch({ type: 'ADD_MESSAGE', payload: message });
-  }, []);
-
-  const clearMessages = useCallback(() => {
-    dispatch({ type: 'CLEAR' });
-  }, []);
-
-  const trimMessages = useCallback((limit?: number) => {
-    dispatch({ type: 'TRIM', payload: limit });
-  }, []);
-
-  const value = useMemo<ChatContextValue>(() => ({
-    messages: state.messages,
-    historyWindow: state.historyWindow,
-    addMessage,
-    clearMessages,
-    trimMessages
-  }), [state.messages, state.historyWindow, addMessage, clearMessages, trimMessages]);
-
-  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
-};
-
 export const useChat = (): ChatContextValue => {
   const context = useContext(ChatContext);
   if (!context) {
@@ -118,3 +88,5 @@ export const useChat = (): ChatContextValue => {
   }
   return context;
 };
+
+export { ChatContext, chatReducer, INITIAL_STATE };
