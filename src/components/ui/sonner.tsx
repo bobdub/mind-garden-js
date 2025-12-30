@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Toaster as Sonner } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
@@ -26,6 +26,8 @@ const resolveDocumentTheme = (): ToasterProps["theme"] => {
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const [theme, setTheme] = useState<ToasterProps["theme"]>(() => resolveDocumentTheme());
+  const themeRef = useRef(theme);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") {
@@ -33,17 +35,31 @@ const Toaster = ({ ...props }: ToasterProps) => {
     }
 
     const updateTheme = () => {
-      setTheme(resolveDocumentTheme());
+      const nextTheme = resolveDocumentTheme();
+      if (themeRef.current !== nextTheme) {
+        themeRef.current = nextTheme;
+        setTheme(nextTheme);
+      }
     };
 
-    updateTheme();
+    const scheduleUpdate = () => {
+      if (rafRef.current !== null) {
+        return;
+      }
+      rafRef.current = window.requestAnimationFrame(() => {
+        rafRef.current = null;
+        updateTheme();
+      });
+    };
+
+    scheduleUpdate();
 
     const mediaQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
-    const mediaListener = () => updateTheme();
+    const mediaListener = () => scheduleUpdate();
     mediaQuery?.addEventListener?.("change", mediaListener);
 
     const observer = typeof MutationObserver !== "undefined"
-      ? new MutationObserver(() => updateTheme())
+      ? new MutationObserver(() => scheduleUpdate())
       : null;
 
     observer?.observe(document.documentElement, {
@@ -52,6 +68,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
     });
 
     return () => {
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
       mediaQuery?.removeEventListener?.("change", mediaListener);
       observer?.disconnect();
     };
