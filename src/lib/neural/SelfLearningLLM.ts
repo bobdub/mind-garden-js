@@ -90,6 +90,7 @@ export class SelfLearningLLM {
     const inputVector = this.vectorize(prompt);
     const targetVector = this.vectorize(response);
     const tags = this.tag(prompt);
+    const labeledTags = ['training-marker', ...tags];
 
     // Train the network
     for (let i = 0; i < 10; i++) {
@@ -100,7 +101,7 @@ export class SelfLearningLLM {
     const entry: TrainingEntry = {
       prompt,
       response,
-      tags,
+      tags: labeledTags,
       timestamp: Date.now()
     };
 
