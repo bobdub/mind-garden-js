@@ -8,10 +8,12 @@ export default defineConfig(({ mode }) => {
   const basePath = mode === "production" ? "/mind-garden-js/" : "/";
 
   return {
+    root: path.resolve(__dirname, "src"),
     base: basePath,
+    publicDir: false,
     build: {
-      outDir: "docs",
-      emptyOutDir: true,
+      outDir: path.resolve(__dirname),
+      emptyOutDir: false,
     },
     server: {
       host: "::",
