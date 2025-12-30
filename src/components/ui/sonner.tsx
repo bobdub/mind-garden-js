@@ -27,7 +27,7 @@ const resolveDocumentTheme = (): ToasterProps["theme"] => {
 const Toaster = ({ ...props }: ToasterProps) => {
   const [theme, setTheme] = useState<ToasterProps["theme"]>(() => resolveDocumentTheme());
   const themeRef = useRef(theme);
-  const rafRef = useRef<number | null>(null);
+  const scheduleRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") {
@@ -43,13 +43,21 @@ const Toaster = ({ ...props }: ToasterProps) => {
     };
 
     const scheduleUpdate = () => {
-      if (rafRef.current !== null) {
+      if (scheduleRef.current !== null) {
         return;
       }
-      rafRef.current = window.requestAnimationFrame(() => {
-        rafRef.current = null;
+      if (typeof window.requestAnimationFrame === "function") {
+        scheduleRef.current = window.requestAnimationFrame(() => {
+          scheduleRef.current = null;
+          updateTheme();
+        });
+        return;
+      }
+
+      scheduleRef.current = window.setTimeout(() => {
+        scheduleRef.current = null;
         updateTheme();
-      });
+      }, 0);
     };
 
     scheduleUpdate();
@@ -68,9 +76,13 @@ const Toaster = ({ ...props }: ToasterProps) => {
     });
 
     return () => {
-      if (rafRef.current !== null) {
-        window.cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
+      if (scheduleRef.current !== null) {
+        if (typeof window.cancelAnimationFrame === "function") {
+          window.cancelAnimationFrame(scheduleRef.current);
+        } else {
+          window.clearTimeout(scheduleRef.current);
+        }
+        scheduleRef.current = null;
       }
       mediaQuery?.removeEventListener?.("change", mediaListener);
       observer?.disconnect();
