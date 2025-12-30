@@ -6,10 +6,15 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const basePath = env.VITE_BASE_PATH || (mode === "production" ? "./" : "/");
+  const basePath =
+    env.VITE_BASE_PATH || (mode === "production" ? "/mind-garden-js/" : "/");
 
   return {
     base: basePath,
+    build: {
+      outDir: "docs",
+      emptyOutDir: true,
+    },
     server: {
       host: "::",
       port: 8080,
