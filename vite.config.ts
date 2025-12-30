@@ -4,8 +4,8 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode, command }) => {
-  const basePath = command === "build" ? "/mind-garden-js/" : "/";
+export default defineConfig(({ mode }) => {
+  const basePath = mode === "production" ? "/mind-garden-js/" : "/";
 
   return {
     base: basePath,
