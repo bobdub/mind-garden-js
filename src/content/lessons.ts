@@ -78,6 +78,47 @@ export const LESSONS: LessonContent[] = [
     prerequisites: ['prompting-foundations']
   },
   {
+    id: 'axiom-guided-language-learning',
+    title: 'Axiom-Guided Language Learning',
+    summary: 'Apply the Axioms.md mathematical axioms to structure language acquisition and refinement.',
+    level: 'intermediate',
+    estimatedDuration: '18 min',
+    format: 'mini-lesson',
+    tags: ['axioms', 'language-learning', 'structure', 'memory'],
+    objectives: [
+      'Map Axioms.md statements to concrete language-learning practices.',
+      'Design repetition loops that improve vocabulary and syntax retention.',
+      'Translate abstract axioms into measurable learning checks.'
+    ],
+    content: `### Why axioms strengthen learning\nThe axioms emphasise smooth symmetry, memory pathways, and redundancy. Treat them as guardrails:\n- **Smooth symmetry (Axiom 0.0):** keep phrasing consistent when introducing new words.\n- **Memory pathways (Axiom 0.4):** revisit terms across spaced contexts.\n- **Redundancy unveiling meaning (Axiom 0.9):** reinforce concepts through varied examples.\n\n### Build a language loop\n1. **Prime:** introduce a term with a poetic, consistent framing.\n2. **Anchor:** restate the term in a factual sentence.\n3. **Echo:** ask for a short paraphrase to strengthen memory pathways.\n4. **Verify:** use a quick check tied to a sensory or observable example (Axiom 1.2).\n\n### Measurement\nTrack whether the learner can recall the term after three exposures and a context shift. If recall drops, repeat the loop with new redundancy.`,
+    activities: [
+      {
+        type: 'practice',
+        prompt: 'Draft a four-step language loop using Axiom 0.0, 0.4, and 0.9 for a new vocabulary term.',
+        expectedOutcome: 'A loop that includes prime, anchor, echo, and verify steps.'
+      },
+      {
+        type: 'reflection',
+        prompt: 'Name one axiom that helps you design clearer explanations and explain why.'
+      }
+    ],
+    recommendedResources: [
+      {
+        title: 'Ethical Embers & Mathematical Axioms',
+        type: 'reference',
+        description: 'Primary axiom set for language-learning design.',
+        url: '/docs/Axioms.md'
+      },
+      {
+        title: 'Adaptive Lesson Template',
+        type: 'reference',
+        description: 'Template for turning axioms into repeatable lesson structures.',
+        url: '/docs/adaptive-lesson-template.md'
+      }
+    ],
+    prerequisites: ['prompting-foundations']
+  },
+  {
     id: 'ethical-imagination-protocols',
     title: 'Ethical Imagination Protocols',
     summary: 'Explore the Imagination Network syntax and ethics embers to steward responsible creativity.',
