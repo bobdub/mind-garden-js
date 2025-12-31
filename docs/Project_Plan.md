@@ -244,7 +244,7 @@ Memory curvature now uses a weighted window over committed memory, feeds into th
 ## Phase 7 — Evaluation & Instrumentation
 Impact: ⭐⭐⭐⭐⭐
 
-Status: 🚧 In Progress
+Status: ✅ Complete
 
 ### Objective
 Instrument the system to observe semantic closure, memory integrity, and attractor stability with precise metrics. Provide dashboards to validate UQRC performance over time.
@@ -273,9 +273,13 @@ Instrument the system to observe semantic closure, memory integrity, and attract
 Kickoff Notes:
 Metric logging is now captured per turn (divergence, closure latency/holds, entropy gate, curvature magnitude, attractor distance, and memory alignment) with a dashboard snapshot surfaced in the UI.
 
+Completion Notes:
+Metric schemas and persistent storage are in place, per-turn metrics collection is wired into the interaction loop, and the Phase 7 dashboard surfaces the latest and recent metric logs for closure, drift, entropy, and memory alignment.
+
 ---
 
 ## Phase 8 — Transformer Mapping (Hybrid Maps)
+Status: 🚧 In Progress
 
 ### Objective
 Map transformer components to UQRC constructs to support hybrid architectures without abandoning UQRC semantics. Ensure compatibility with Ω gating and curvature controls.
@@ -299,6 +303,9 @@ Map transformer components to UQRC constructs to support hybrid architectures wi
 - Hybrid mapping document
 - Validation report against UQRC metrics
 - Comparative behavior analysis
+
+Kickoff Notes:
+Established a hybrid mapping module with initial attention, EOS, and positional encoding mappings plus readiness checks against Phase 7 metric thresholds.
 
 ---
 

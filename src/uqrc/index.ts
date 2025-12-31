@@ -2,6 +2,7 @@ export * from "./interaction";
 export * from "./attractor";
 export * from "./closure";
 export * from "./encoding";
+export * from "./hybridMapping";
 export * from "./loop";
 export * from "./memory";
 export * from "./metrics";
