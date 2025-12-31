@@ -105,6 +105,8 @@ Memory now flows through an Ephemeral Working State before promotion to Committe
 ## Phase 3 — Semantic Attractor Definition
 Impact: ⭐⭐⭐⭐
 
+Status: ✅ Complete
+
 ### Objective
 Anchor the system to a stable identity and conversational continuity using a semantic attractor. Reduce drift by explicitly constraining motion toward A.
 
@@ -128,10 +130,15 @@ Anchor the system to a stable identity and conversational continuity using a sem
 - Constraint term implementation notes
 - Attractor distance trend charts
 
+Completion Notes:
+Semantic attractor facets are defined and encoded into the UQRC vector space, with the constraint term wired into the evolution loop. Attractor distance is logged per interaction and stored alongside memory entries, enabling drift trend tracking.
+
 ---
 
 ## Phase 4 — Semantic Derivative Realignment
 Impact: ⭐⭐⭐
+
+Status: 🚧 In Progress
 
 ### Objective
 Replace token-step derivatives with meaning-step derivatives to enable controlled semantic motion. Ensure responses progress via intent and narrative time rather than token noise.
@@ -155,6 +162,9 @@ Replace token-step derivatives with meaning-step derivatives to enable controlle
 - Updated derivative definitions
 - Semantic motion comparison report
 - Narrative time tracking logs
+
+Kickoff Notes:
+Semantic derivative realignment has started with intent progression, referential continuity, narrative time, and turn completion signals now feeding the derivative term.
 
 ---
 

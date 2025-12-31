@@ -43,6 +43,10 @@ export const UqrcDashboard = () => {
     lMin: 1,
     curvatureStrength: 1,
     attractorStrength: 0.08,
+    intentStrength: 0.12,
+    continuityStrength: 0.1,
+    narrativeTimeWeight: 0.15,
+    completionWeight: 0.4,
   });
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState(0.5);

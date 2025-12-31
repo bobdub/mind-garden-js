@@ -2,7 +2,7 @@ import {
   applyCoercive,
   applyCurvature,
   applyDiffusion,
-  applyDiscrete,
+  applySemanticDerivative,
   combineVectors,
   Vector,
   vectorDelta,
@@ -20,6 +20,10 @@ export interface UQRCParams {
   lMin: number;
   curvatureStrength: number;
   attractorStrength: number;
+  intentStrength: number;
+  continuityStrength: number;
+  narrativeTimeWeight: number;
+  completionWeight: number;
 }
 
 export const defaultParams: UQRCParams = {
@@ -28,6 +32,10 @@ export const defaultParams: UQRCParams = {
   lMin: 1,
   curvatureStrength: 1,
   attractorStrength: 0.08,
+  intentStrength: 0.12,
+  continuityStrength: 0.1,
+  narrativeTimeWeight: 0.15,
+  completionWeight: 0.4,
 };
 
 export const initializeState = (dimension = 8, seed = 0): UQRCState => ({
@@ -41,7 +49,11 @@ export const updateState = (
   state: UQRCState,
   params: UQRCParams,
   context: Vector = [],
-  attractor?: SemanticAttractor
+  attractor?: SemanticAttractor,
+  derivativeContext?: {
+    narrativeTime?: number;
+    turnCompletion?: number;
+  }
 ): UQRCState => {
   const diffusion = vectorDelta(applyDiffusion(state.u, params.nu), state.u);
   const curvature = vectorDelta(
@@ -52,7 +64,15 @@ export const updateState = (
     state.u
   );
   const coercive = vectorDelta(applyCoercive(state.u, params.beta), state.u);
-  const discrete = applyDiscrete(state.u, params.lMin);
+  const derivative = applySemanticDerivative(state.u, context, {
+    lMin: params.lMin,
+    intentStrength: params.intentStrength,
+    continuityStrength: params.continuityStrength,
+    narrativeTimeWeight: params.narrativeTimeWeight,
+    completionWeight: params.completionWeight,
+    narrativeTime: derivativeContext?.narrativeTime ?? state.step,
+    turnCompletion: derivativeContext?.turnCompletion,
+  });
   const attractorConstraint =
     attractor && params.attractorStrength > 0
       ? computeAttractorConstraint(state.u, attractor, params.attractorStrength)
@@ -62,7 +82,7 @@ export const updateState = (
     diffusion,
     curvature,
     coercive,
-    discrete,
+    derivative,
     attractorConstraint
   );
   const nextU = state.u.map((value, index) => value + (delta[index] ?? 0));

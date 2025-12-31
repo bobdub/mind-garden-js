@@ -2,6 +2,36 @@ export type Vector = number[];
 
 const epsilon = 1e-9;
 
+const normalizeVector = (vector: Vector): Vector => {
+  if (vector.length === 0) {
+    return [];
+  }
+
+  const max = Math.max(1, ...vector.map((value) => Math.abs(value)));
+  return vector.map((value) => value / max);
+};
+
+const computeCosineSimilarity = (left: Vector, right: Vector): number => {
+  const length = Math.min(left.length, right.length);
+  if (length === 0) {
+    return 0;
+  }
+
+  let dot = 0;
+  let leftMag = 0;
+  let rightMag = 0;
+  for (let index = 0; index < length; index += 1) {
+    const leftValue = left[index] ?? 0;
+    const rightValue = right[index] ?? 0;
+    dot += leftValue * rightValue;
+    leftMag += leftValue * leftValue;
+    rightMag += rightValue * rightValue;
+  }
+
+  const magnitude = Math.sqrt(leftMag * rightMag);
+  return magnitude === 0 ? 0 : dot / magnitude;
+};
+
 export const applyDiffusion = (u: Vector, nu: number): Vector => {
   if (u.length === 0) {
     return [];
@@ -48,6 +78,55 @@ export const applyDiscrete = (u: Vector, lMin: number): Vector => {
     const next = u[(index + 1) % u.length];
     return (next - value) / step;
   });
+};
+
+export interface SemanticDerivativeOptions {
+  lMin: number;
+  intentStrength: number;
+  continuityStrength: number;
+  narrativeTimeWeight: number;
+  completionWeight: number;
+  narrativeTime?: number;
+  turnCompletion?: number;
+}
+
+const clamp01 = (value: number): number =>
+  Math.max(0, Math.min(1, value));
+
+export const applySemanticDerivative = (
+  u: Vector,
+  context: Vector,
+  options: SemanticDerivativeOptions
+): Vector => {
+  if (u.length === 0) {
+    return [];
+  }
+
+  const normalizedU = normalizeVector(u);
+  const normalizedContext = normalizeVector(context);
+  const similarity = computeCosineSimilarity(normalizedU, normalizedContext);
+  const continuityFactor = 1 - similarity;
+  const narrativeTime = options.narrativeTime ?? 0;
+  const turnCompletion = clamp01(options.turnCompletion ?? 0);
+  const narrativeScale =
+    1 + Math.log1p(narrativeTime) * options.narrativeTimeWeight;
+  const completionScale = 0.5 + turnCompletion * options.completionWeight;
+
+  const baseDiscrete = applyDiscrete(u, options.lMin).map(
+    (value) => value * narrativeScale
+  );
+  const intentSignal = normalizedU.map((value, index) => {
+    const target = normalizedContext[index] ?? 0;
+    return (target - value) * options.intentStrength * completionScale;
+  });
+  const continuitySignal = normalizedU.map((value, index) => {
+    const target = normalizedContext[index] ?? 0;
+    return (
+      (target - value) * options.continuityStrength * continuityFactor
+    );
+  });
+
+  return combineVectors(baseDiscrete, intentSignal, continuitySignal);
 };
 
 export const vectorDelta = (next: Vector, current: Vector): Vector =>
