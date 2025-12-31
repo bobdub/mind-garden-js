@@ -118,12 +118,12 @@ export const UqrcDashboard = () => {
     });
     setState(result.state);
     setChatHistory((prev) => [
+      ...prev,
       {
         input: chatInput,
         output: result.output,
         step: result.state.step,
       },
-      ...prev,
     ]);
     setMetricsEntries(metricsStore.list());
     setChatInput("");
@@ -140,9 +140,13 @@ export const UqrcDashboard = () => {
     <div className="space-y-6">
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="text-primary">UQRC Chat</CardTitle>
+          <CardTitle className="text-primary">Inline Conversation</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Exchange in-line prompts with the loop. Messages thread in sequence,
+            with each step emitted as a paired response.
+          </p>
           <Textarea
             value={chatInput}
             onChange={(event) => setChatInput(event.target.value)}
@@ -155,23 +159,33 @@ export const UqrcDashboard = () => {
             placeholder="Chat with the UQRC loop..."
             rows={4}
           />
-          <Button onClick={handleChatSend}>Send Message</Button>
-          <div className="space-y-3 max-h-64 overflow-y-auto">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={handleChatSend}>Send Message</Button>
+            <span className="text-xs text-muted-foreground">
+              Shift + Enter for a new line
+            </span>
+          </div>
+          <div className="space-y-4 max-h-72 overflow-y-auto rounded-xl border border-border/60 bg-background/40 p-4">
             {chatHistory.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No chat messages yet. Send a prompt to see the loop respond.
               </p>
             ) : (
               chatHistory.map((entry) => (
-                <div
-                  key={`${entry.step}-${entry.input}`}
-                  className="rounded-md border border-border/60 bg-background/50 p-3 text-sm"
-                >
-                  <p className="text-xs text-muted-foreground">
-                    Step {entry.step}
-                  </p>
-                  <p className="font-medium">You: {entry.input}</p>
-                  <p className="text-muted-foreground">Loop: {entry.output}</p>
+                <div key={`${entry.step}-${entry.input}`} className="space-y-3">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Step {entry.step}</span>
+                    <span>Inline thread</span>
+                  </div>
+                  <div className="grid gap-3">
+                    <div className="chat-bubble chat-bubble-user justify-self-end">
+                      <span className="font-medium">You</span>: {entry.input}
+                    </div>
+                    <div className="chat-bubble chat-bubble-loop justify-self-start">
+                      <span className="font-medium text-foreground">Loop</span>:{" "}
+                      {entry.output}
+                    </div>
+                  </div>
                 </div>
               ))
             )}
