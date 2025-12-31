@@ -42,6 +42,7 @@ export const UqrcDashboard = () => {
     beta: 0.05,
     lMin: 1,
     curvatureStrength: 1,
+    attractorStrength: 0.08,
   });
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState(0.5);

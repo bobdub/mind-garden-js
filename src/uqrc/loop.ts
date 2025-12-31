@@ -7,6 +7,7 @@ import {
   Vector,
   vectorDelta,
 } from "./operators";
+import { computeAttractorConstraint, SemanticAttractor } from "./attractor";
 
 export interface UQRCState {
   u: Vector;
@@ -18,6 +19,7 @@ export interface UQRCParams {
   beta: number;
   lMin: number;
   curvatureStrength: number;
+  attractorStrength: number;
 }
 
 export const defaultParams: UQRCParams = {
@@ -25,6 +27,7 @@ export const defaultParams: UQRCParams = {
   beta: 0.05,
   lMin: 1,
   curvatureStrength: 1,
+  attractorStrength: 0.08,
 };
 
 export const initializeState = (dimension = 8, seed = 0): UQRCState => ({
@@ -37,7 +40,8 @@ export const initializeState = (dimension = 8, seed = 0): UQRCState => ({
 export const updateState = (
   state: UQRCState,
   params: UQRCParams,
-  context: Vector = []
+  context: Vector = [],
+  attractor?: SemanticAttractor
 ): UQRCState => {
   const diffusion = vectorDelta(applyDiffusion(state.u, params.nu), state.u);
   const curvature = vectorDelta(
@@ -49,8 +53,18 @@ export const updateState = (
   );
   const coercive = vectorDelta(applyCoercive(state.u, params.beta), state.u);
   const discrete = applyDiscrete(state.u, params.lMin);
+  const attractorConstraint =
+    attractor && params.attractorStrength > 0
+      ? computeAttractorConstraint(state.u, attractor, params.attractorStrength)
+      : [];
 
-  const delta = combineVectors(diffusion, curvature, coercive, discrete);
+  const delta = combineVectors(
+    diffusion,
+    curvature,
+    coercive,
+    discrete,
+    attractorConstraint
+  );
   const nextU = state.u.map((value, index) => value + (delta[index] ?? 0));
 
   return {
