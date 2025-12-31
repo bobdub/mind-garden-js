@@ -44,6 +44,8 @@ Use this matrix to trace how incremental updates in each companion document conv
 | `Layer`          | Collection of neurons forming a feedforward layer.                          |
 | `SelfLearningLLM`| Main model class with input, hidden, and output layers.                     |
 | `Memory`         | In-memory or persistent memory store for learned prompts/responses.         |
+| `EphemeralWorkingState` | Short-lived buffer for in-progress cognition prior to closure gating. |
+| `CommittedMemory`| Verified storage for entries that pass Ω(ALLOW) and integrity checks.       |
 | `LocalMemory`    | Uses `localStorage` for persistent memory across sessions.                  |
 | `Tagger`         | Extracts semantic tags and intentions from user input.                      |
 
@@ -80,6 +82,14 @@ interface Memory<TValue = unknown> {
   remember(entry: { key: string; value: TValue; tags?: string[] }): void;
   recall(query: { key: string }): TValue | undefined;
   forget(target: { key: string }): void;
+}
+
+interface EphemeralWorkingState<TValue = unknown> extends Memory<TValue> {
+  promote(entry: { key: string; integrityScore: number }): void;
+}
+
+interface CommittedMemory<TValue = unknown> extends Memory<TValue> {
+  listCommittedKeys(): string[];
 }
 
 interface LocalMemory<TValue = unknown> extends Memory<TValue> {
@@ -125,8 +135,9 @@ sequenceDiagram
     T->>M: 2. Return tags + vectorized input
     M->>M: 3. Forward pass generates prediction
     M->>M: 4. Compute error vs. target
-    M->>Mem: 5. Persist refined memory entry
-    Mem-->>M: 6. Acknowledge stored state
+    M->>M: 5. Verify Ω(ALLOW) + integrity score
+    M->>Mem: 6. Promote entry to Committed Memory
+    Mem-->>M: 7. Acknowledge stored state + audit log
 ```
 
 ### Stage Preconditions & Postconditions
@@ -141,8 +152,8 @@ sequenceDiagram
    - *Pre*: Expected target vector resolved from memory or supervision signal.
    - *Post*: Error vector computed and propagated to weight adjustment logic.
 4. **Memory Update**
-   - *Pre*: Latest prompt, response, tags, and error context available.
-   - *Post*: Memory store contains new or updated entry, ready for future retrieval.
+   - *Pre*: Latest prompt, response, tags, and error context available; Ω(ALLOW) confirmed and integrity checks pass.
+   - *Post*: Committed memory contains new or updated entry; rejected writes recorded for audit.
 
 ---
 
@@ -210,6 +221,8 @@ type MemoryEntry = {
   vector: Vector;
   tags: TagList;
   errorVector?: number[]; // Optional for training diagnostics
+  closureState?: "ALLOW" | "HOLD"; // Ω gate state at write time
+  integrityScore?: number; // 0 to 1, required for committed entries
   updatedAt: string; // ISO-8601
 };
 
@@ -220,6 +233,8 @@ const exampleMemoryEntry: MemoryEntry = {
   vector: exampleVector,
   tags: exampleTags,
   errorVector: [0.12, -0.03, 0.04],
+  closureState: "ALLOW",
+  integrityScore: 0.98,
   updatedAt: "2024-05-01T12:05:10.000Z",
 };
 ```
@@ -229,6 +244,7 @@ const exampleMemoryEntry: MemoryEntry = {
 ## 💾 Persistence Strategy
 
 - **Local Phase (`LocalMemory`)**: Data persists via `localStorage` under a namespace per model instance. Entries are JSON-serialized memory payloads keyed by prompt hashes.
+- **Memory Stabilization**: Ephemeral working entries stay in-memory until Ω(ALLOW) and integrity checks pass, then they are promoted into committed storage with audit metadata.
 - **Transition Trigger**: When entry count or payload size exceeds configurable thresholds (e.g., 1,000 entries or 5 MB), initiate migration to a structured IndexedDB store.
 - **IndexedDB Layout**: Utilize object stores for `prompts`, `vectors`, and `metadata`, keyed by prompt hash with indexed timestamps to support range queries.
 - **Migration Flow**:
