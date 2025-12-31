@@ -348,3 +348,9 @@ Phases are sequential, but instrumentation in Phase 7 can run in parallel to lat
 | Curvature magnitude | ||∇_μ ∇_ν S(u_t)|| | Curvature probe | Heatmap over time |
 | Entropy activation rate | entropy_on / total_turns | Entropy gate log | Stacked area chart |
 | Context carryover score | references_to_prior / eligible_turns | Dialogue analyzer | Line chart with targets |
+
+---
+
+## Implementation Review References
+- **Per-phase audit:** See `docs/Implementation_Audit.md` for correctness and stability inspection notes tied to implementation anchors.
+- **Essence & projection:** See `docs/Essence_Projection.md` for a refined view of current system essence and forward stabilization focus.
