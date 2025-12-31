@@ -12,8 +12,8 @@ export default defineConfig(({ mode }) => {
     base: basePath,
     publicDir: false,
     build: {
-      outDir: path.resolve(__dirname, "dist"),
-      emptyOutDir: true,
+      outDir: path.resolve(__dirname, "."),
+      emptyOutDir: false,
     },
     server: {
       host: "::",
