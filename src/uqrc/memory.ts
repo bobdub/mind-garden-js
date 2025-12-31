@@ -1,4 +1,5 @@
 import { Vector } from "./operators";
+import { evaluateSemanticClosure } from "./closure";
 import { canUseLocalStorage, getLocalStorage } from "../lib/storage/storageAvailability";
 
 export interface MemoryEntry {
@@ -9,38 +10,108 @@ export interface MemoryEntry {
   timestamp: number;
 }
 
+export interface MemoryIntegrityReport {
+  ok: boolean;
+  reasons: string[];
+}
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
+const isVector = (value: unknown): value is Vector =>
+  Array.isArray(value) && value.every(isFiniteNumber);
+
+const validateMemoryEntry = (entry: MemoryEntry): MemoryIntegrityReport => {
+  const reasons: string[] = [];
+
+  if (!entry.input.trim()) {
+    reasons.push("missing_input");
+  }
+
+  if (!entry.output.trim()) {
+    reasons.push("missing_output");
+  }
+
+  if (!isVector(entry.u)) {
+    reasons.push("invalid_state_vector");
+  }
+
+  if (!isFiniteNumber(entry.timestamp)) {
+    reasons.push("invalid_timestamp");
+  }
+
+  const closure = evaluateSemanticClosure(entry.output, { minTokens: 1 });
+  if (closure.status === "hold") {
+    reasons.push("closure_hold");
+  }
+
+  return {
+    ok: reasons.length === 0,
+    reasons,
+  };
+};
+
 export class MemoryStore {
-  private entries: MemoryEntry[] = [];
+  private committedEntries: MemoryEntry[] = [];
+  private workingEntries: MemoryEntry[] = [];
 
   constructor(initialEntries: MemoryEntry[] = []) {
-    this.entries = [...initialEntries];
+    this.committedEntries = [...initialEntries];
   }
 
   addEntry(entry: MemoryEntry): void {
-    this.entries.push(entry);
+    this.commitEntry(entry);
+  }
+
+  addWorkingEntry(entry: MemoryEntry): void {
+    if (!entry || !entry.input || !entry.output || !isVector(entry.u)) {
+      console.warn("[uqrc] rejected working memory write", entry);
+      return;
+    }
+    this.workingEntries.push(entry);
+  }
+
+  commitEntry(entry: MemoryEntry): boolean {
+    const report = validateMemoryEntry(entry);
+    if (!report.ok) {
+      console.warn("[uqrc] rejected memory commit", report.reasons, entry);
+      return false;
+    }
+    this.committedEntries.push(entry);
+    return true;
   }
 
   updateFeedback(timestamp: number, feedback: number): void {
-    const entry = this.entries.find((item) => item.timestamp === timestamp);
+    const entry = this.committedEntries.find(
+      (item) => item.timestamp === timestamp
+    );
     if (entry) {
       entry.feedback = feedback;
     }
   }
 
   list(): MemoryEntry[] {
-    return [...this.entries];
+    return [...this.committedEntries];
+  }
+
+  listWorking(): MemoryEntry[] {
+    return [...this.workingEntries];
+  }
+
+  clearWorking(): void {
+    this.workingEntries = [];
   }
 
   latestState(): Vector | null {
-    if (this.entries.length === 0) {
+    if (this.committedEntries.length === 0) {
       return null;
     }
 
-    return this.entries[this.entries.length - 1]?.u ?? null;
+    return this.committedEntries[this.committedEntries.length - 1]?.u ?? null;
   }
 
   latestSeed(): number {
-    const latest = this.entries[this.entries.length - 1];
+    const latest = this.committedEntries[this.committedEntries.length - 1];
     if (!latest) {
       return 0;
     }
@@ -62,10 +133,6 @@ export const createBrowserMemoryStore = (key = "uqrc-memory"): MemoryStore => {
     return new MemoryStore();
   }
 
-  const isFiniteNumber = (value: unknown): value is number =>
-    typeof value === "number" && Number.isFinite(value);
-  const isVector = (value: unknown): value is Vector =>
-    Array.isArray(value) && value.every(isFiniteNumber);
   const normalizeEntry = (value: unknown): MemoryEntry | null => {
     if (!value || typeof value !== "object") {
       return null;
@@ -131,10 +198,17 @@ export const createBrowserMemoryStore = (key = "uqrc-memory"): MemoryStore => {
     persist();
   }
 
+  const originalCommit = store.commitEntry.bind(store);
+  store.commitEntry = (entry: MemoryEntry) => {
+    const committed = originalCommit(entry);
+    if (committed) {
+      persist();
+    }
+    return committed;
+  };
   const originalAdd = store.addEntry.bind(store);
   store.addEntry = (entry: MemoryEntry) => {
     originalAdd(entry);
-    persist();
   };
 
   return store;
