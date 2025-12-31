@@ -279,7 +279,7 @@ Metric schemas and persistent storage are in place, per-turn metrics collection 
 ---
 
 ## Phase 8 — Transformer Mapping (Hybrid Maps)
-Status: 🚧 In Progress
+Status: ✅ Complete
 
 ### Objective
 Map transformer components to UQRC constructs to support hybrid architectures without abandoning UQRC semantics. Ensure compatibility with Ω gating and curvature controls.
@@ -306,6 +306,9 @@ Map transformer components to UQRC constructs to support hybrid architectures wi
 
 Kickoff Notes:
 Established a hybrid mapping module with initial attention, EOS, and positional encoding mappings plus readiness checks against Phase 7 metric thresholds.
+
+Completion Notes:
+Hybrid mapping documentation is published with aligned term definitions, plus readiness evaluation logic that checks closure allow rate, divergence, attractor distance, and memory alignment against Phase 7 thresholds.
 
 ---
 
