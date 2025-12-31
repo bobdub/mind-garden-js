@@ -102,4 +102,19 @@ All colors MUST be HSL.
     backdrop-filter: blur(10px);
     border: 1px solid hsl(217 33% 25%);
   }
+
+  .chat-bubble {
+    @apply rounded-2xl border border-border/60 px-4 py-2 text-sm leading-relaxed;
+    box-shadow: 0 12px 24px hsl(222 47% 11% / 0.25);
+  }
+
+  .chat-bubble-user {
+    @apply bg-primary/10 text-foreground;
+    border-top-right-radius: 0.25rem;
+  }
+
+  .chat-bubble-loop {
+    @apply bg-background/70 text-muted-foreground;
+    border-top-left-radius: 0.25rem;
+  }
 }
