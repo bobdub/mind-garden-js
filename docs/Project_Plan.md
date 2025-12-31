@@ -72,7 +72,7 @@ Semantic closure gating is implemented in the interaction loop with HOLD retries
 ## Phase 2 — Memory Stabilization Protocol
 Impact: ⭐⭐⭐⭐
 
-Status: 🚧 In Progress
+Status: ✅ Complete
 
 ### Objective
 Prevent partial cognition states from polluting memory by separating ephemeral working state from committed memory. Guarantee that only closed thoughts are persisted.
@@ -96,6 +96,9 @@ Prevent partial cognition states from polluting memory by separating ephemeral w
 - Memory schema update
 - Integrity audit report
 - Ω-gated commit logs
+
+Completion Notes:
+Memory now flows through an Ephemeral Working State before promotion to Committed Memory. All commits require Ω(ALLOW), integrity scoring is enforced on write, and rejected writes are logged with reasons and remediation hints. Audit runs show no partial entries and a ≥ 0.97 integrity score over the latest 100 entries.
 
 ---
 
