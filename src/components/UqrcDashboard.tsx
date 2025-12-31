@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   createBrowserMemoryStore,
+  createBrowserMetricsStore,
   createBrowserTrainingHookStore,
   decodeOutput,
   initializeInteractionState,
@@ -22,6 +23,10 @@ interface ConsoleEntry {
 
 export const UqrcDashboard = () => {
   const memory = useMemo(() => createBrowserMemoryStore("uqrc-memory"), []);
+  const metricsStore = useMemo(
+    () => createBrowserMetricsStore("uqrc-metrics"),
+    []
+  );
   const trainingHookStore = useMemo(
     () => createBrowserTrainingHookStore("uqrc-training-hooks"),
     []
@@ -59,6 +64,9 @@ export const UqrcDashboard = () => {
   const [lastOutput, setLastOutput] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState<ConsoleEntry[]>([]);
+  const [metricsEntries, setMetricsEntries] = useState(
+    metricsStore.list()
+  );
 
   const handleRun = () => {
     if (!input.trim()) {
@@ -67,12 +75,14 @@ export const UqrcDashboard = () => {
 
     const result = runInteractionStep(input, state, {
       memory,
+      metricsStore,
       params,
       feedback,
       trainingHooks,
     });
     setState(result.state);
     setLastOutput(result.output);
+    setMetricsEntries(metricsStore.list());
     setInput("");
   };
 
@@ -101,6 +111,7 @@ export const UqrcDashboard = () => {
 
     const result = runInteractionStep(chatInput, state, {
       memory,
+      metricsStore,
       params,
       feedback,
       trainingHooks,
@@ -114,6 +125,7 @@ export const UqrcDashboard = () => {
       },
       ...prev,
     ]);
+    setMetricsEntries(metricsStore.list());
     setChatInput("");
   };
 
@@ -121,6 +133,8 @@ export const UqrcDashboard = () => {
     Math.max(-1, Math.min(1, value))
   );
   const memoryEntries = memory.list().slice(-5).reverse();
+  const recentMetrics = metricsEntries.slice(-5).reverse();
+  const latestMetrics = metricsStore.latest();
 
   return (
     <div className="space-y-6">
@@ -284,6 +298,91 @@ export const UqrcDashboard = () => {
               </div>
             ))
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="text-primary">Phase 7 Metrics</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          {latestMetrics ? (
+            <div className="rounded-md border border-border/60 bg-background/50 p-3 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Step {latestMetrics.step} ·{" "}
+                {new Date(latestMetrics.timestamp).toLocaleTimeString()}
+              </p>
+              <div className="grid gap-2 md:grid-cols-2">
+                <div>
+                  <p className="text-muted-foreground">Semantic divergence</p>
+                  <p className="font-medium">
+                    {formatValue(latestMetrics.semanticDivergence)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Closure latency</p>
+                  <p className="font-medium">
+                    {latestMetrics.closureLatencyMs} ms ·{" "}
+                    {latestMetrics.closureHoldSteps} holds
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Attractor distance</p>
+                  <p className="font-medium">
+                    {formatValue(latestMetrics.attractorDistance)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Curvature magnitude</p>
+                  <p className="font-medium">
+                    {formatValue(latestMetrics.curvatureMagnitude)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Entropy gate</p>
+                  <p className="font-medium">
+                    {formatValue(latestMetrics.entropyGate)} ·{" "}
+                    {latestMetrics.entropyActive ? "active" : "idle"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Memory alignment</p>
+                  <p className="font-medium">
+                    {formatValue(latestMetrics.memoryAlignment)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">
+              No metrics captured yet. Run a step to collect Phase 7 signals.
+            </p>
+          )}
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Recent metric logs</p>
+            {recentMetrics.length === 0 ? (
+              <p className="text-muted-foreground">
+                No metric entries recorded.
+              </p>
+            ) : (
+              recentMetrics.map((entry) => (
+                <div
+                  key={`${entry.timestamp}-${entry.step}`}
+                  className="rounded-md border border-border/60 bg-background/50 p-3"
+                >
+                  <p className="text-xs text-muted-foreground">
+                    Step {entry.step} ·{" "}
+                    {new Date(entry.timestamp).toLocaleTimeString()}
+                  </p>
+                  <p className="text-muted-foreground">
+                    Divergence {formatValue(entry.semanticDivergence)} · Closure{" "}
+                    {formatValue(entry.closureScore)} · Entropy{" "}
+                    {formatValue(entry.entropyGate)}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
