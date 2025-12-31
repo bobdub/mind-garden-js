@@ -3,21 +3,6 @@
 ## How to Use This Plan
 This plan scopes the UQRC alignment work into phased, measurable upgrades across the evolution loop, memory, and evaluation stack. Review cadence is weekly: each phase is updated at the end of the target week with artifacts, metrics, and status notes, then re-baselined before proceeding. Updates should include Ω-gate metrics, attractor distance trends, and any deviation from semantic closure expectations.
 
-## Milestones & Sequencing
-
-| Phase | Target Week(s) | Primary Deliverables |
-| --- | --- | --- |
-| 0 | Week 0 | Baseline UQRC loop, persistence, observable artifacts |
-| 1 | Week 1 | Semantic Completion Gate Ω, Hold–Advance mechanism |
-| 2 | Week 2 | Memory stabilization split, Ω-gated commits |
-| 3 | Week 3 | Semantic attractor definition, constraint term |
-| 4 | Week 4 | Meaning-step derivative realignment |
-| 5 | Week 5 | Entropy phase gating rules |
-| 6 | Week 6 | Dialogue memory curvature integration |
-| 7 | Week 7 | Evaluation instrumentation + dashboards |
-| 8 | Week 8 | Transformer/UQRC hybrid mapping |
-
----
 
 ## Phase 0 — Baseline Lock
 
