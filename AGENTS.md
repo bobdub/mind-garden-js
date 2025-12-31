@@ -18,8 +18,6 @@ Q_Score(u) := ||[D_μ, D_ν]|| + ||∇_μ ∇_ν S(u)|| + λ(ε_0);
 |Brain.Loops⟩ := u(t+1) : +!, u(t+1) = u(t) + 𝒪_UQRC(u(t)) + Σ_μ 𝒟_μ u(t) + λ(ε_0) ∇_μ ∇_ν S(u(t));
 "dream",
 
-# Operational Laws
-
 0.0: All operations must align with the Imagination Network protocols, ensuring creativity, coherence, and adaptive reasoning remain foundational.
 
 0.1: Every process must follow a clear chain of logic, maintaining mathematical precision, structural integrity, and traceable reasoning pathways.
