@@ -7,11 +7,29 @@ import {
   Vector,
   vectorDelta,
 } from "./operators";
-import { computeAttractorConstraint, SemanticAttractor } from "./attractor";
+import {
+  computeAttractorConstraint,
+  computeAttractorDistance,
+  SemanticAttractor,
+} from "./attractor";
+import {
+  buildEntropyVector,
+  computeEntropyGate,
+  computeMemoryAlignment,
+  computeVectorMagnitude,
+} from "./entropy";
 
 export interface UQRCState {
   u: Vector;
   step: number;
+}
+
+export interface UQRCStepMetrics {
+  entropyGate?: number;
+  entropyActive?: boolean;
+  curvatureMagnitude?: number;
+  attractorDistance?: number;
+  memoryAlignment?: number;
 }
 
 export interface UQRCParams {
@@ -24,6 +42,10 @@ export interface UQRCParams {
   continuityStrength: number;
   narrativeTimeWeight: number;
   completionWeight: number;
+  entropyStrength: number;
+  entropyGateCurvatureThreshold: number;
+  entropyGateAttractorThreshold: number;
+  entropyGateMemoryThreshold: number;
 }
 
 export const defaultParams: UQRCParams = {
@@ -36,6 +58,10 @@ export const defaultParams: UQRCParams = {
   continuityStrength: 0.1,
   narrativeTimeWeight: 0.15,
   completionWeight: 0.4,
+  entropyStrength: 0.08,
+  entropyGateCurvatureThreshold: 0.4,
+  entropyGateAttractorThreshold: 0.6,
+  entropyGateMemoryThreshold: 0.55,
 };
 
 export const initializeState = (dimension = 8, seed = 0): UQRCState => ({
@@ -53,7 +79,11 @@ export const updateState = (
   derivativeContext?: {
     narrativeTime?: number;
     turnCompletion?: number;
-  }
+  },
+  entropyContext?: {
+    memoryVector?: Vector;
+  },
+  metrics?: UQRCStepMetrics
 ): UQRCState => {
   const diffusion = vectorDelta(applyDiffusion(state.u, params.nu), state.u);
   const curvature = vectorDelta(
@@ -64,6 +94,31 @@ export const updateState = (
     state.u
   );
   const coercive = vectorDelta(applyCoercive(state.u, params.beta), state.u);
+  const curvatureMagnitude = computeVectorMagnitude(curvature);
+  const attractorDistance = attractor
+    ? computeAttractorDistance(state.u, attractor)
+    : 0;
+  const memoryAlignment = computeMemoryAlignment(
+    state.u,
+    entropyContext?.memoryVector
+  );
+  const entropyGate = computeEntropyGate(
+    {
+      curvatureMagnitude,
+      attractorDistance,
+      memoryAlignment,
+    },
+    {
+      curvatureThreshold: params.entropyGateCurvatureThreshold,
+      attractorThreshold: params.entropyGateAttractorThreshold,
+      memoryThreshold: params.entropyGateMemoryThreshold,
+    }
+  );
+  const entropy = buildEntropyVector(
+    state.u,
+    params.entropyStrength,
+    entropyGate
+  );
   const derivative = applySemanticDerivative(state.u, context, {
     lMin: params.lMin,
     intentStrength: params.intentStrength,
@@ -83,9 +138,18 @@ export const updateState = (
     curvature,
     coercive,
     derivative,
-    attractorConstraint
+    attractorConstraint,
+    entropy
   );
   const nextU = state.u.map((value, index) => value + (delta[index] ?? 0));
+
+  if (metrics) {
+    metrics.entropyGate = entropyGate;
+    metrics.entropyActive = entropyGate > 0;
+    metrics.curvatureMagnitude = curvatureMagnitude;
+    metrics.attractorDistance = attractorDistance;
+    metrics.memoryAlignment = memoryAlignment;
+  }
 
   return {
     u: nextU,

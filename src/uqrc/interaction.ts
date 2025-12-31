@@ -1,5 +1,12 @@
 import { MemoryStore } from "./memory";
-import { defaultParams, initializeState, UQRCParams, UQRCState, updateState } from "./loop";
+import {
+  defaultParams,
+  initializeState,
+  UQRCParams,
+  UQRCState,
+  UQRCStepMetrics,
+  updateState,
+} from "./loop";
 import { TrainingHook } from "./trainingHooks";
 import { evaluateSemanticClosure, SemanticClosureOptions, SemanticClosureResult } from "./closure";
 import { decodeOutput, encodeInput, getOutputDictionary } from "./encoding";
@@ -14,6 +21,10 @@ export interface InteractionResult {
   state: UQRCState;
   closure: SemanticClosureResult;
   attractorDistance?: number;
+  entropyGate?: number;
+  entropyActive?: boolean;
+  memoryAlignment?: number;
+  curvatureMagnitude?: number;
 }
 
 export interface InteractionOptions {
@@ -27,6 +38,7 @@ export interface InteractionOptions {
   };
   attractor?: SemanticAttractor;
   logAttractorDistance?: boolean;
+  logEntropyActivation?: boolean;
 }
 
 const resolveAttractor = (
@@ -57,6 +69,7 @@ export const runInteractionStep = (
   const encoded = encodeInput(input, state.u.length);
   const dictionary = getOutputDictionary(input);
   const turnCompletion = computeTurnCompletion(input, dictionary);
+  const memoryVector = options.memory?.latestState() ?? undefined;
   const minTokens = Math.min(
     options.closure?.minTokens ?? 2,
     Math.max(1, dictionary.length)
@@ -65,10 +78,19 @@ export const runInteractionStep = (
     ...options.closure,
     minTokens,
   };
-  let nextState = updateState(state, params, encoded, attractor, {
-    narrativeTime: state.step,
-    turnCompletion,
-  });
+  let stepMetrics: UQRCStepMetrics = {};
+  let nextState = updateState(
+    state,
+    params,
+    encoded,
+    attractor,
+    {
+      narrativeTime: state.step,
+      turnCompletion,
+    },
+    { memoryVector },
+    stepMetrics
+  );
   const normalizedInput = input.trim();
   const trainingHooks = options.trainingHooks ?? [];
   const matchedHook = trainingHooks.find(
@@ -105,10 +127,19 @@ export const runInteractionStep = (
     const maxHoldSteps = options.closure?.maxHoldSteps ?? 2;
     let holdSteps = 0;
     while (closure.status === "hold" && holdSteps < maxHoldSteps) {
-      nextState = updateState(nextState, params, encoded, attractor, {
-        narrativeTime: nextState.step,
-        turnCompletion,
-      });
+      stepMetrics = {};
+      nextState = updateState(
+        nextState,
+        params,
+        encoded,
+        attractor,
+        {
+          narrativeTime: nextState.step,
+          turnCompletion,
+        },
+        { memoryVector },
+        stepMetrics
+      );
       output = decodeOutput(nextState.u, input, dictionary);
       closure = evaluateSemanticClosure(output, closureConfig);
       holdSteps += 1;
@@ -131,6 +162,16 @@ export const runInteractionStep = (
       step: nextState.step,
     });
   }
+  if (options.logEntropyActivation ?? true) {
+    console.info("[uqrc] entropy gate", {
+      gate: stepMetrics.entropyGate ?? 0,
+      active: stepMetrics.entropyActive ?? false,
+      curvatureMagnitude: stepMetrics.curvatureMagnitude ?? 0,
+      memoryAlignment: stepMetrics.memoryAlignment ?? 0,
+      attractorDistance,
+      step: nextState.step,
+    });
+  }
 
   if (options.memory) {
     const entry = {
@@ -147,7 +188,16 @@ export const runInteractionStep = (
     }
   }
 
-  return { output, state: nextState, closure, attractorDistance };
+  return {
+    output,
+    state: nextState,
+    closure,
+    attractorDistance,
+    entropyGate: stepMetrics.entropyGate,
+    entropyActive: stepMetrics.entropyActive,
+    memoryAlignment: stepMetrics.memoryAlignment,
+    curvatureMagnitude: stepMetrics.curvatureMagnitude,
+  };
 };
 
 export const initializeInteractionState = (

@@ -234,4 +234,20 @@ export const updateParameters = (
     0,
     params.completionWeight - learningRate * loss * 0.05
   ),
+  entropyStrength: Math.max(
+    0,
+    params.entropyStrength - learningRate * loss * 0.05
+  ),
+  entropyGateCurvatureThreshold: Math.max(
+    0,
+    params.entropyGateCurvatureThreshold - learningRate * loss * 0.02
+  ),
+  entropyGateAttractorThreshold: Math.max(
+    0,
+    params.entropyGateAttractorThreshold - learningRate * loss * 0.02
+  ),
+  entropyGateMemoryThreshold: Math.max(
+    0,
+    params.entropyGateMemoryThreshold - learningRate * loss * 0.02
+  ),
 });

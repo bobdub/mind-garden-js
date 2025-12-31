@@ -138,7 +138,7 @@ Semantic attractor facets are defined and encoded into the UQRC vector space, wi
 ## Phase 4 — Semantic Derivative Realignment
 Impact: ⭐⭐⭐
 
-Status: 🚧 In Progress
+Status: ✅ Completed
 
 ### Objective
 Replace token-step derivatives with meaning-step derivatives to enable controlled semantic motion. Ensure responses progress via intent and narrative time rather than token noise.
@@ -163,13 +163,15 @@ Replace token-step derivatives with meaning-step derivatives to enable controlle
 - Semantic motion comparison report
 - Narrative time tracking logs
 
-Kickoff Notes:
-Semantic derivative realignment has started with intent progression, referential continuity, narrative time, and turn completion signals now feeding the derivative term.
+Completion Notes:
+Meaning-step derivatives are now driven by intent progression, referential continuity, narrative time, and turn completion scaling, with discrete steps realigned around narrative motion.
 
 ---
 
 ## Phase 5 — Entropy Phase Gating (Creativity Control)
 Impact: ⭐⭐⭐
+
+Status: 🚧 In Progress
 
 ### Objective
 Introduce entropy only when the system is stable, making creativity coherent rather than chaotic. Use curvature, attractor distance, and memory alignment to gate entropy.
@@ -194,6 +196,9 @@ Introduce entropy only when the system is stable, making creativity coherent rat
 - Entropy gating policy
 - Coherence vs. creativity report
 - Entropy activation dashboard
+
+Kickoff Notes:
+Entropy gate scaffolding now scores curvature stability, attractor proximity, and memory alignment, emitting a gated entropy vector and logging activation state per turn.
 
 ---
 
