@@ -39,6 +39,8 @@ Semantic evolution occurs, but meaning never closes before memory write or emiss
 ## Phase 1 — Semantic Closure Layer (Critical Fix)
 Impact: ⭐⭐⭐⭐⭐
 
+Status: ✅ Complete
+
 ### Objective
 Ensure responses complete their intent before output emission, memory storage, and loop advancement. Introduce Ω to enforce semantic closure prior to any externalization.
 
@@ -62,10 +64,15 @@ Ensure responses complete their intent before output emission, memory storage, a
 - Closure metric logs
 - Hold–Advance state transition diagram
 
+Completion Notes:
+Semantic closure gating is implemented in the interaction loop with HOLD retries and forced allow safeguards. Memory writes now respect Ω(ALLOW) before commits, and closure evaluation uses minimum token and disallowed-ending checks.
+
 ---
 
 ## Phase 2 — Memory Stabilization Protocol
 Impact: ⭐⭐⭐⭐
+
+Status: 🚧 In Progress
 
 ### Objective
 Prevent partial cognition states from polluting memory by separating ephemeral working state from committed memory. Guarantee that only closed thoughts are persisted.
@@ -297,4 +304,3 @@ Phases are sequential, but instrumentation in Phase 7 can run in parallel to lat
 | Curvature magnitude | ||∇_μ ∇_ν S(u_t)|| | Curvature probe | Heatmap over time |
 | Entropy activation rate | entropy_on / total_turns | Entropy gate log | Stacked area chart |
 | Context carryover score | references_to_prior / eligible_turns | Dialogue analyzer | Line chart with targets |
-

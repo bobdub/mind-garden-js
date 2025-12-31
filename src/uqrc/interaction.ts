@@ -130,14 +130,18 @@ export const runInteractionStep = (
     }
   }
 
-  if (options.memory && closure.status === "allow") {
-    options.memory.addEntry({
+  if (options.memory) {
+    const entry = {
       input,
       output,
       u: nextState.u,
       feedback: options.feedback,
       timestamp: Date.now(),
-    });
+    };
+    options.memory.addWorkingEntry(entry);
+    if (closure.status === "allow") {
+      options.memory.commitEntry(entry);
+    }
   }
 
   return { output, state: nextState, closure };
