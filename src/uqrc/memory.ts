@@ -7,6 +7,7 @@ export interface MemoryEntry {
   output: string;
   u: Vector;
   feedback?: number;
+  attractorDistance?: number;
   timestamp: number;
 }
 
@@ -151,6 +152,9 @@ export const createBrowserMemoryStore = (key = "uqrc-memory"): MemoryStore => {
       output: entry.output,
       u: entry.u,
       feedback: isFiniteNumber(entry.feedback) ? entry.feedback : undefined,
+      attractorDistance: isFiniteNumber(entry.attractorDistance)
+        ? entry.attractorDistance
+        : undefined,
       timestamp: entry.timestamp,
     };
   };

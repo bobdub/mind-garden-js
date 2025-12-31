@@ -214,4 +214,8 @@ export const updateParameters = (
     0,
     params.curvatureStrength - learningRate * loss * 0.2
   ),
+  attractorStrength: Math.max(
+    0,
+    params.attractorStrength - learningRate * loss * 0.1
+  ),
 });
