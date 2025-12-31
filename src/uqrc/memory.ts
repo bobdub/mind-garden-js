@@ -16,6 +16,11 @@ export interface MemoryIntegrityReport {
   reasons: string[];
 }
 
+export interface MemoryCurvatureOptions {
+  windowSize?: number;
+  weightDecay?: number;
+}
+
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
@@ -120,10 +125,55 @@ export class MemoryStore {
     return latest.u.reduce((sum, value) => sum + value, 0);
   }
 
+  getMemoryCurvature(
+    windowSize = 5,
+    weightDecay = 0.7
+  ): Vector | null {
+    const curvature = computeMemoryCurvature(this.committedEntries, {
+      windowSize,
+      weightDecay,
+    });
+    return curvature.length > 0 ? curvature : null;
+  }
+
   toJSON(): MemoryEntry[] {
     return this.list();
   }
 }
+
+export const computeMemoryCurvature = (
+  entries: MemoryEntry[],
+  { windowSize = 5, weightDecay = 0.7 }: MemoryCurvatureOptions = {}
+): Vector => {
+  if (entries.length === 0 || windowSize <= 0) {
+    return [];
+  }
+
+  const usableEntries = entries.slice(-windowSize);
+  const vectorLength = Math.max(
+    0,
+    ...usableEntries.map((entry) => entry.u.length)
+  );
+  if (vectorLength === 0) {
+    return [];
+  }
+
+  const clampedDecay = Math.min(1, Math.max(0, weightDecay));
+  const weights = usableEntries.map((_, index) =>
+    Math.pow(clampedDecay, usableEntries.length - 1 - index)
+  );
+  const totalWeight = weights.reduce((sum, value) => sum + value, 0);
+  if (totalWeight === 0) {
+    return [];
+  }
+
+  return Array.from({ length: vectorLength }, (_, index) => {
+    const weightedSum = usableEntries.reduce((sum, entry, entryIndex) => {
+      return sum + (entry.u[index] ?? 0) * weights[entryIndex];
+    }, 0);
+    return weightedSum / totalWeight;
+  });
+};
 
 export const createBrowserMemoryStore = (key = "uqrc-memory"): MemoryStore => {
   if (typeof window === "undefined") {

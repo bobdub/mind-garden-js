@@ -2,6 +2,7 @@ import {
   applyCoercive,
   applyCurvature,
   applyDiffusion,
+  applyMemoryCurvature,
   applySemanticDerivative,
   combineVectors,
   Vector,
@@ -46,6 +47,7 @@ export interface UQRCParams {
   entropyGateCurvatureThreshold: number;
   entropyGateAttractorThreshold: number;
   entropyGateMemoryThreshold: number;
+  memoryCurvatureStrength: number;
 }
 
 export const defaultParams: UQRCParams = {
@@ -62,6 +64,7 @@ export const defaultParams: UQRCParams = {
   entropyGateCurvatureThreshold: 0.4,
   entropyGateAttractorThreshold: 0.6,
   entropyGateMemoryThreshold: 0.55,
+  memoryCurvatureStrength: 0.25,
 };
 
 export const initializeState = (dimension = 8, seed = 0): UQRCState => ({
@@ -82,6 +85,9 @@ export const updateState = (
   },
   entropyContext?: {
     memoryVector?: Vector;
+  },
+  memoryContext?: {
+    curvatureVector?: Vector;
   },
   metrics?: UQRCStepMetrics
 ): UQRCState => {
@@ -119,6 +125,11 @@ export const updateState = (
     params.entropyStrength,
     entropyGate
   );
+  const memoryCurvature = applyMemoryCurvature(
+    state.u,
+    memoryContext?.curvatureVector ?? [],
+    params.memoryCurvatureStrength
+  );
   const derivative = applySemanticDerivative(state.u, context, {
     lMin: params.lMin,
     intentStrength: params.intentStrength,
@@ -139,7 +150,8 @@ export const updateState = (
     coercive,
     derivative,
     attractorConstraint,
-    entropy
+    entropy,
+    memoryCurvature
   );
   const nextU = state.u.map((value, index) => value + (delta[index] ?? 0));
 

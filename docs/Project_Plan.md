@@ -171,7 +171,7 @@ Meaning-step derivatives are now driven by intent progression, referential conti
 ## Phase 5 — Entropy Phase Gating (Creativity Control)
 Impact: ⭐⭐⭐
 
-Status: 🚧 In Progress
+Status: ✅ Complete
 
 ### Objective
 Introduce entropy only when the system is stable, making creativity coherent rather than chaotic. Use curvature, attractor distance, and memory alignment to gate entropy.
@@ -198,12 +198,17 @@ Introduce entropy only when the system is stable, making creativity coherent rat
 - Entropy activation dashboard
 
 Kickoff Notes:
-Entropy gate scaffolding now scores curvature stability, attractor proximity, and memory alignment, emitting a gated entropy vector and logging activation state per turn.
+Entropy gate now scores curvature stability, attractor proximity, and memory alignment, emitting a gated entropy vector and logging activation state per turn.
+
+Completion Notes:
+Entropy gating is fully wired into the evolution loop, scaling entropy by curvature magnitude, attractor distance, and memory alignment while logging gate metrics per turn.
 
 ---
 
 ## Phase 6 — Dialogue Memory Curvature
 Impact: ⭐⭐⭐⭐
+
+Status: 🚧 In Progress
 
 ### Objective
 Transform looped responses into narratives by integrating short-term memory curvature into evolution. Ensure past context naturally informs present output.
@@ -227,6 +232,9 @@ Transform looped responses into narratives by integrating short-term memory curv
 - Memory curvature implementation
 - Window/weight tuning notes
 - Continuity score report
+
+Kickoff Notes:
+Short-term memory curvature is computed as a weighted window over recent committed memory states and injected into the evolution step to support narrative continuity.
 
 ---
 

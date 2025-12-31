@@ -68,6 +68,21 @@ export const applyCurvature = (u: Vector, context: Vector): Vector => {
 export const applyCoercive = (u: Vector, beta: number): Vector =>
   u.map((value) => value - beta * Math.tanh(value));
 
+export const applyMemoryCurvature = (
+  u: Vector,
+  memoryCurvature: Vector,
+  strength: number
+): Vector => {
+  if (u.length === 0 || memoryCurvature.length === 0 || strength === 0) {
+    return [];
+  }
+
+  return u.map((value, index) => {
+    const target = memoryCurvature[index] ?? value;
+    return (target - value) * strength;
+  });
+};
+
 export const applyDiscrete = (u: Vector, lMin: number): Vector => {
   if (u.length === 0) {
     return [];

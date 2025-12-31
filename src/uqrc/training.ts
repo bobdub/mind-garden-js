@@ -250,4 +250,8 @@ export const updateParameters = (
     0,
     params.entropyGateMemoryThreshold - learningRate * loss * 0.02
   ),
+  memoryCurvatureStrength: Math.max(
+    0,
+    params.memoryCurvatureStrength - learningRate * loss * 0.02
+  ),
 });
