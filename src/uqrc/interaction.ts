@@ -39,6 +39,8 @@ export interface InteractionOptions {
   attractor?: SemanticAttractor;
   logAttractorDistance?: boolean;
   logEntropyActivation?: boolean;
+  memoryCurvatureWindow?: number;
+  memoryCurvatureDecay?: number;
 }
 
 const resolveAttractor = (
@@ -70,6 +72,11 @@ export const runInteractionStep = (
   const dictionary = getOutputDictionary(input);
   const turnCompletion = computeTurnCompletion(input, dictionary);
   const memoryVector = options.memory?.latestState() ?? undefined;
+  const memoryCurvature =
+    options.memory?.getMemoryCurvature(
+      options.memoryCurvatureWindow,
+      options.memoryCurvatureDecay
+    ) ?? undefined;
   const minTokens = Math.min(
     options.closure?.minTokens ?? 2,
     Math.max(1, dictionary.length)
@@ -89,6 +96,7 @@ export const runInteractionStep = (
       turnCompletion,
     },
     { memoryVector },
+    { curvatureVector: memoryCurvature ?? undefined },
     stepMetrics
   );
   const normalizedInput = input.trim();
@@ -138,6 +146,7 @@ export const runInteractionStep = (
           turnCompletion,
         },
         { memoryVector },
+        { curvatureVector: memoryCurvature ?? undefined },
         stepMetrics
       );
       output = decodeOutput(nextState.u, input, dictionary);
