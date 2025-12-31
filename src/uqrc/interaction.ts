@@ -34,6 +34,19 @@ const resolveAttractor = (
   provided?: SemanticAttractor
 ): SemanticAttractor => provided ?? createDefaultAttractor(dimension);
 
+const computeTurnCompletion = (input: string, dictionary: string[]): number => {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return 0;
+  }
+
+  const tokenCount = dictionary.length;
+  const tokenScore = Math.min(1, tokenCount / 12);
+  const terminalScore = /[.!?]$/.test(trimmed) ? 0.3 : 0;
+
+  return Math.min(1, tokenScore * 0.7 + terminalScore);
+};
+
 export const runInteractionStep = (
   input: string,
   state: UQRCState,
@@ -43,6 +56,7 @@ export const runInteractionStep = (
   const attractor = resolveAttractor(state.u.length, options.attractor);
   const encoded = encodeInput(input, state.u.length);
   const dictionary = getOutputDictionary(input);
+  const turnCompletion = computeTurnCompletion(input, dictionary);
   const minTokens = Math.min(
     options.closure?.minTokens ?? 2,
     Math.max(1, dictionary.length)
@@ -51,7 +65,10 @@ export const runInteractionStep = (
     ...options.closure,
     minTokens,
   };
-  let nextState = updateState(state, params, encoded, attractor);
+  let nextState = updateState(state, params, encoded, attractor, {
+    narrativeTime: state.step,
+    turnCompletion,
+  });
   const normalizedInput = input.trim();
   const trainingHooks = options.trainingHooks ?? [];
   const matchedHook = trainingHooks.find(
@@ -88,7 +105,10 @@ export const runInteractionStep = (
     const maxHoldSteps = options.closure?.maxHoldSteps ?? 2;
     let holdSteps = 0;
     while (closure.status === "hold" && holdSteps < maxHoldSteps) {
-      nextState = updateState(nextState, params, encoded, attractor);
+      nextState = updateState(nextState, params, encoded, attractor, {
+        narrativeTime: nextState.step,
+        turnCompletion,
+      });
       output = decodeOutput(nextState.u, input, dictionary);
       closure = evaluateSemanticClosure(output, closureConfig);
       holdSteps += 1;

@@ -218,4 +218,20 @@ export const updateParameters = (
     0,
     params.attractorStrength - learningRate * loss * 0.1
   ),
+  intentStrength: Math.max(
+    0,
+    params.intentStrength - learningRate * loss * 0.08
+  ),
+  continuityStrength: Math.max(
+    0,
+    params.continuityStrength - learningRate * loss * 0.08
+  ),
+  narrativeTimeWeight: Math.max(
+    0,
+    params.narrativeTimeWeight - learningRate * loss * 0.05
+  ),
+  completionWeight: Math.max(
+    0,
+    params.completionWeight - learningRate * loss * 0.05
+  ),
 });
