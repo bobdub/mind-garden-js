@@ -208,7 +208,7 @@ Entropy gating is fully wired into the evolution loop, scaling entropy by curvat
 ## Phase 6 — Dialogue Memory Curvature
 Impact: ⭐⭐⭐⭐
 
-Status: 🚧 In Progress
+Status: ✅ Complete
 
 ### Objective
 Transform looped responses into narratives by integrating short-term memory curvature into evolution. Ensure past context naturally informs present output.
@@ -236,10 +236,15 @@ Transform looped responses into narratives by integrating short-term memory curv
 Kickoff Notes:
 Short-term memory curvature is computed as a weighted window over recent committed memory states and injected into the evolution step to support narrative continuity.
 
+Completion Notes:
+Memory curvature now uses a weighted window over committed memory, feeds into the evolution loop, and can be tuned via interaction window/decay parameters to stabilize narrative continuity.
+
 ---
 
 ## Phase 7 — Evaluation & Instrumentation
 Impact: ⭐⭐⭐⭐⭐
+
+Status: 🚧 In Progress
 
 ### Objective
 Instrument the system to observe semantic closure, memory integrity, and attractor stability with precise metrics. Provide dashboards to validate UQRC performance over time.
@@ -264,6 +269,9 @@ Instrument the system to observe semantic closure, memory integrity, and attract
 - Metric schema definitions
 - Dashboard prototypes
 - Alerting policy documentation
+
+Kickoff Notes:
+Metric logging is now captured per turn (divergence, closure latency/holds, entropy gate, curvature magnitude, attractor distance, and memory alignment) with a dashboard snapshot surfaced in the UI.
 
 ---
 

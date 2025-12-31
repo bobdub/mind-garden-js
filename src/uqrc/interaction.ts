@@ -1,4 +1,5 @@
 import { MemoryStore } from "./memory";
+import { MetricsStore } from "./metrics";
 import {
   defaultParams,
   initializeState,
@@ -15,6 +16,8 @@ import {
   createDefaultAttractor,
   SemanticAttractor,
 } from "./attractor";
+import { computeVectorMagnitude } from "./entropy";
+import { vectorDelta } from "./operators";
 
 export interface InteractionResult {
   output: string;
@@ -41,6 +44,7 @@ export interface InteractionOptions {
   logEntropyActivation?: boolean;
   memoryCurvatureWindow?: number;
   memoryCurvatureDecay?: number;
+  metricsStore?: MetricsStore;
 }
 
 const resolveAttractor = (
@@ -66,6 +70,7 @@ export const runInteractionStep = (
   state: UQRCState,
   options: InteractionOptions = {}
 ): InteractionResult => {
+  const startedAt = Date.now();
   const params = { ...defaultParams, ...options.params };
   const attractor = resolveAttractor(state.u.length, options.attractor);
   const encoded = encodeInput(input, state.u.length);
@@ -86,6 +91,7 @@ export const runInteractionStep = (
     minTokens,
   };
   let stepMetrics: UQRCStepMetrics = {};
+  let holdSteps = 0;
   let nextState = updateState(
     state,
     params,
@@ -133,7 +139,6 @@ export const runInteractionStep = (
     : evaluateSemanticClosure(output, closureConfig);
   if (!lockedOutput) {
     const maxHoldSteps = options.closure?.maxHoldSteps ?? 2;
-    let holdSteps = 0;
     while (closure.status === "hold" && holdSteps < maxHoldSteps) {
       stepMetrics = {};
       nextState = updateState(
@@ -196,6 +201,25 @@ export const runInteractionStep = (
       options.memory.commitEntry(entry);
     }
   }
+
+  const semanticDivergence = computeVectorMagnitude(
+    vectorDelta(nextState.u, state.u)
+  );
+  options.metricsStore?.addEntry({
+    step: nextState.step,
+    timestamp: Date.now(),
+    semanticDivergence,
+    closureLatencyMs: Date.now() - startedAt,
+    closureHoldSteps: holdSteps,
+    closureStatus: closure.status,
+    closureScore: closure.score,
+    closureForced: closure.forced ?? false,
+    attractorDistance,
+    curvatureMagnitude: stepMetrics.curvatureMagnitude ?? 0,
+    entropyGate: stepMetrics.entropyGate ?? 0,
+    entropyActive: stepMetrics.entropyActive ?? false,
+    memoryAlignment: stepMetrics.memoryAlignment ?? 0,
+  });
 
   return {
     output,

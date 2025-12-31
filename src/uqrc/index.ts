@@ -4,6 +4,7 @@ export * from "./closure";
 export * from "./encoding";
 export * from "./loop";
 export * from "./memory";
+export * from "./metrics";
 export * from "./operators";
 export * from "./training";
 export * from "./trainingHooks";
